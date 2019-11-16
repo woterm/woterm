@@ -1,0 +1,25 @@
+<RCC>
+    <qresource prefix="/qwoterm">
+        <file>resource/skin/add.png</file>
+        <file>resource/skin/download.png</file>
+        <file>resource/skin/export.png</file>
+        <file>resource/skin/hsplit.png</file>
+        <file>resource/skin/import.png</file>
+        <file>resource/skin/list.png</file>
+        <file>resource/skin/manage.png</file>
+        <file>resource/skin/reload.png</file>
+        <file>resource/skin/tabclose.png</file>
+        <file>resource/skin/upload.png</file>
+        <file>resource/skin/vsplit.png</file>
+        <file>resource/skin/woterm.png</file>
+        <file>resource/skin/woterm2.png</file>
+        <file>resource/skin/cfgdef.png</file>
+        <file>resource/skin/woterm3.png</file>
+        <file>resource/skin/woterm4.png</file>
+        <file>resource/skin/find.png</file>
+        <file>resource/skin/connect.png</file>
+        <file>resource/skin/linkcfg.png</file>
+        <file>resource/skin/save.png</file>
+        <file>resource/skin/about.png</file>
+    </qresource>
+</RCC>

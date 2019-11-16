@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QWoSessionManage</class>
+ <widget class="QDialog" name="QWoSessionManage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>650</width>
+    <height>477</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="qwoterm.qrc">
+    <normaloff>:/qwoterm/resource/skin/manage.png</normaloff>:/qwoterm/resource/skin/manage.png</iconset>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="btnConnect">
+       <property name="text">
+        <string>Connect</string>
+       </property>
+       <property name="icon">
+        <iconset resource="qwoterm.qrc">
+         <normaloff>:/qwoterm/resource/skin/connect.png</normaloff>:/qwoterm/resource/skin/connect.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnNew">
+       <property name="text">
+        <string>New</string>
+       </property>
+       <property name="icon">
+        <iconset resource="qwoterm.qrc">
+         <normaloff>:/qwoterm/resource/skin/add.png</normaloff>:/qwoterm/resource/skin/add.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnModify">
+       <property name="text">
+        <string>Modify</string>
+       </property>
+       <property name="icon">
+        <iconset resource="qwoterm.qrc">
+         <normaloff>:/qwoterm/resource/skin/linkcfg.png</normaloff>:/qwoterm/resource/skin/linkcfg.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnDelete">
+       <property name="text">
+        <string>Delete</string>
+       </property>
+       <property name="icon">
+        <iconset resource="qwoterm.qrc">
+         <normaloff>:/qwoterm/resource/skin/tabclose.png</normaloff>:/qwoterm/resource/skin/tabclose.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLineEdit" name="lineEdit"/>
+   </item>
+   <item>
+    <widget class="QTreeView" name="treeView"/>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="qwoterm.qrc"/>
+ </resources>
+ <connections/>
+</ui>

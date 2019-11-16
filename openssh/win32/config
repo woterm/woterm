@@ -1,0 +1,12 @@
+Host jump
+    HostName 192.168.10.138
+    Port 22
+    User abc
+    IdentityFile H:\tools\kingsoft\ssh.kingsoft\id_rsa
+ 
+Host gitlab
+    HostName 192.168.10.138
+    Port 22
+    User abc
+    IdentityFile H:\tools\kingsoft\ssh.kingsoft\id_rsa
+    ProxyJump jump

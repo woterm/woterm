@@ -175,6 +175,7 @@ void ColorScheme::setColorTableEntry(int index , const ColorEntry& entry)
 
     _table[index] = entry;
 }
+
 ColorEntry ColorScheme::colorEntry(int index , uint randomSeed) const
 {
     Q_ASSERT( index >= 0 && index < TABLE_COLORS );
@@ -211,6 +212,7 @@ void ColorScheme::getColorTable(ColorEntry* table , uint randomSeed) const
     for ( int i = 0 ; i < TABLE_COLORS ; i++ )
         table[i] = colorEntry(i,randomSeed);
 }
+
 bool ColorScheme::randomizedBackgroundColor() const
 {
     return _randomTable == 0 ? false : !_randomTable[1].isNull();

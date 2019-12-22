@@ -240,6 +240,11 @@ void QWoMainWindow::onActionAboutTriggered()
     dlg.exec();
 }
 
+void QWoMainWindow::onActionScriptRunTriggered()
+{
+    m_shower->openScriptRuner("script");
+}
+
 void QWoMainWindow::initMenuBar()
 {
     QObject::connect(ui->actionDisconect, SIGNAL(triggered()), this, SLOT(onActionDisconnectTriggered()));
@@ -277,8 +282,11 @@ void QWoMainWindow::initToolBar()
 //    QAction *myexport = tool->addAction(QIcon(":/qwoterm/resource/skin/export.png"), tr("Export"));
 //    QObject::connect(myexport, SIGNAL(triggered()), this, SLOT(onActionExportTriggered()));
 
-    QAction *cfgdef = tool->addAction(QIcon(":/qwoterm/resource/skin/cfgdef.png"), tr("Setting"));
+    QAction *cfgdef = tool->addAction(QIcon(":/qwoterm/resource/skin/palette.png"), tr("Setting"));
     QObject::connect(cfgdef, SIGNAL(triggered()), this, SLOT(onActionConfigDefaultTriggered()));
+
+    QAction *script = tool->addAction(QIcon(":/qwoterm/resource/skin/js.png"), tr("Script"));
+    QObject::connect(script, SIGNAL(triggered()), this, SLOT(onActionScriptRunTriggered()));
 
     QAction *about = tool->addAction(QIcon(":/qwoterm/resource/skin/about.png"), tr("About"));
     QObject::connect(about, SIGNAL(triggered()), this, SLOT(onActionAboutTriggered()));

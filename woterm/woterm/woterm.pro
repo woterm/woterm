@@ -1,4 +1,4 @@
-QT       += core gui network
+QT       += core gui network script scripttools
 RC_ICONS = woterm.ico
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -12,6 +12,7 @@ include($$PWD/../third/aes/aes.pri)
 DESTDIR = $$PROJECT_BINDIR
 unix:QMAKE_RPATHDIR+=$$PROJECT_LIBDIR
 SOURCES += main.cpp \
+    vte.cpp \
     ipchelper.cpp \
     qwotermwidget.cpp \
     qwoshellwidget.cpp \
@@ -39,9 +40,18 @@ SOURCES += main.cpp \
     qwopasswordinput.cpp \
     qwotermstyle.cpp \
     qwolinenoise.cpp \
-    qwoaboutdialog.cpp
+    qwoaboutdialog.cpp \
+    qwoscriptmaster.cpp \
+    qwoscriptwidgetimpl.cpp \
+    qwoscriptselector.cpp \
+    qwoshellcommand.cpp \
+    qwolocalcommand.cpp \
+    qwoshellprocess.cpp \
+    qwocmdspy.cpp \
+    qworesult.cpp
 
 HEADERS += \
+    vte.h \
     ipchelper.h \
     qwotermwidget.h \
     qwoshellwidget.h \
@@ -71,8 +81,17 @@ HEADERS += \
     qwotermstyle.h \
     qwolinenoise.h \
     qwoaboutdialog.h \
+    qwoscriptmaster.h \
+    qwoscriptwidgetimpl.h \
     version.h \
-    version.h
+    qwoscriptselector.h \
+    qwoshellcommand.h \
+    qwolocalcommand.h \
+    qwoshellprocess.h \
+    qwocmdspy.h \
+    qwoscript.h \
+    qworesult.h
+
 
 FORMS += \
     qwohostlist.ui \
@@ -84,6 +103,7 @@ FORMS += \
     qwotermmask.ui \
     qwotermmask.ui \
     qwopasswordinput.ui \
-    qwoaboutdialog.ui
+    qwoaboutdialog.ui \
+    qwoscriptselector.ui
 
 RESOURCES += qwoterm.qrc

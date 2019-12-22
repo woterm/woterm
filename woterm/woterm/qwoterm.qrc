@@ -21,5 +21,15 @@
         <file>resource/skin/linkcfg.png</file>
         <file>resource/skin/save.png</file>
         <file>resource/skin/about.png</file>
+        <file>resource/skin/javascript.png</file>
+        <file>resource/skin/javascript2.png</file>
+        <file>resource/skin/js.png</file>
+        <file>resource/skin/folder.png</file>
+        <file>resource/skin/debug.png</file>
+        <file>resource/skin/run.png</file>
+        <file>resource/skin/stop.png</file>
+        <file>resource/skin/palette.png</file>
+        <file>resource/skin/pattern2.png</file>
+        <file>resource/skin/style.png</file>
     </qresource>
 </RCC>

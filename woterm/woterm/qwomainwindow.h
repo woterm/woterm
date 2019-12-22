@@ -52,6 +52,8 @@ private slots:
     void onActionConfigDefaultTriggered();
     void onActionFindTriggered();
     void onActionAboutTriggered();
+    void onActionScriptRunTriggered();
+
 private:
     void initMenuBar();
     void initToolBar();

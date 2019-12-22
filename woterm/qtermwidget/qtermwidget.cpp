@@ -37,6 +37,7 @@
 #include "qtermwidget.h"
 
 #include "Vt102Emulation.h"
+#include "tools.h"
 
 
 #ifdef Q_OS_MACOS
@@ -203,7 +204,6 @@ bool QTermWidget::terminalSizeHint()
     return m_impl->m_terminalDisplay->terminalSizeHint();
 }
 
-#define TRANSLATIONS_DIR "./translations"
 
 void QTermWidget::init(int startnow)
 {
@@ -211,9 +211,8 @@ void QTermWidget::init(int startnow)
     m_layout->setMargin(0);
     setLayout(m_layout);
 
-    // translations
-    QString binPath = QCoreApplication::applicationDirPath();
-    QString transPath = QDir::cleanPath(binPath + "/../opt/" + TRANSLATIONS_DIR + "/");
+    // translations    
+    QString transPath = get_translation_dir();
     QStringList dirs;
     dirs.append(transPath);
 
@@ -368,6 +367,21 @@ QStringList QTermWidget::availableColorSchemes()
 void QTermWidget::addCustomColorSchemeDir(const QString& custom_dir)
 {
     ColorSchemeManager::instance()->addCustomColorSchemeDir(custom_dir);
+}
+
+void QTermWidget::setDefaultColorSchemaDir(const QString &path)
+{
+    set_default_color_scheme_dir(path);
+}
+
+void QTermWidget::setDefaultKeyboardDir(const QString &path)
+{
+    set_default_keyboard_layout_dir(path);
+}
+
+void QTermWidget::setDefaultTranslationDir(const QString &path)
+{
+    set_default_translation_dir(path);
 }
 
 void QTermWidget::setSize(const QSize &size)

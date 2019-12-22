@@ -88,6 +88,7 @@ void QWoSshProcess::triggerKeepAliveCheck()
     }
 }
 
+
 void QWoSshProcess::zmodemSend(const QStringList &files)
 {
 
@@ -249,9 +250,9 @@ void QWoSshProcess::onZmodemRecv()
 
     m_zmodem = createZmodem();
     m_zmodem->setProgram(m_exeRecv);
-    QStringList args;
-    args << "rz";
-    m_zmodem->setArguments(args);
+//    QStringList args;
+//    args << "rz";
+//    m_zmodem->setArguments(args);
     m_zmodem->setWorkingDirectory(filePath);
     m_zmodem->start();
 }

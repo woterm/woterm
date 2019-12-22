@@ -1,6 +1,7 @@
 #include "qwoshower.h"
 #include "qwotermwidgetimpl.h"
 #include "qwoshellwidgetimpl.h"
+#include "qwoscriptwidgetimpl.h"
 #include "qwosessionproperty.h"
 #include "qwomainwindow.h"
 #include "qwosshconf.h"
@@ -39,6 +40,14 @@ bool QWoShower::openLocalShell()
 //    QWoShowerWidget *impl = new QWoShellWidgetImpl(this);
 //    impl->setProperty(TAB_TYPE_NAME, ETShell);
 //    createTab(impl, "local");
+    return true;
+}
+
+bool QWoShower::openScriptRuner(const QString& script)
+{
+    QWoScriptWidgetImpl *impl = new QWoScriptWidgetImpl(this);
+    impl->setProperty(TAB_TYPE_NAME, ETScript);
+    createTab(impl, script);
     return true;
 }
 
@@ -150,18 +159,22 @@ bool QWoShower::tabMouseButtonPress(QMouseEvent *ev)
     qDebug() << "tab hit" << idx;
     QVariant v = m_tab->tabData(idx);
     QWoShowerWidget *impl = v.value<QWoShowerWidget*>();
+    bool ok = false;
+    int type = impl->property(TAB_TYPE_NAME).toInt(&ok);
     if(ev->buttons().testFlag(Qt::RightButton)) {
         QMenu menu(impl);
         m_tabMenu = &menu;
         m_tabMenu->setProperty(TAB_TARGET_IMPL, QVariant::fromValue(impl));
-        QAction *modify = menu.addAction(QIcon(":/qwoterm/resource/skin/linkcfg.png"), tr("Edit"));        
-        QObject::connect(modify, SIGNAL(triggered()), this, SLOT(onModifyThisSession()));
+        if(type == ETSsh && ok) {
+            QAction *modify = menu.addAction(QIcon(":/qwoterm/resource/skin/linkcfg.png"), tr("Edit"));
+            QObject::connect(modify, SIGNAL(triggered()), this, SLOT(onModifyThisSession()));
+            QAction *dup = menu.addAction(tr("Duplicate In New Window"));
+            QObject::connect(dup, SIGNAL(triggered()), this, SLOT(onDuplicateInNewWindow()));
+        }
         QAction *close = menu.addAction(tr("Close This Tab"));
         QObject::connect(close, SIGNAL(triggered()), this, SLOT(onCloseThisTabSession()));
         QAction *other = menu.addAction(tr("Close Other Tab"));
-        QObject::connect(other, SIGNAL(triggered()), this, SLOT(onCloseOtherTabSession()));
-        QAction *dup = menu.addAction(tr("Duplicate In New Window"));
-        QObject::connect(dup, SIGNAL(triggered()), this, SLOT(onDuplicateInNewWindow()));
+        QObject::connect(other, SIGNAL(triggered()), this, SLOT(onCloseOtherTabSession()));        
         menu.exec(QCursor::pos());
     }
 
@@ -243,7 +256,16 @@ void QWoShower::onModifyThisSession()
 
 void QWoShower::onCloseThisTabSession()
 {
-    deleteLater();
+    if(m_tabMenu == nullptr) {
+        return;
+    }
+    QVariant vimpl = m_tabMenu->property(TAB_TARGET_IMPL);
+    QWidget *impl = vimpl.value<QWidget*>();
+    if(impl == nullptr) {
+        QMessageBox::warning(this, tr("alert"), tr("failed to find impl infomation"));
+        return;
+    }
+    impl->deleteLater();
 }
 
 void QWoShower::onCloseOtherTabSession()

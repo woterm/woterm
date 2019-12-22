@@ -963,6 +963,7 @@ void Vt102Emulation::reportCursorPosition()
   char tmp[20];
   sprintf(tmp,"\033[%d;%dR",_currentScreen->getCursorY()+1,_currentScreen->getCursorX()+1);
   sendString(tmp);
+  qDebug() << "reportCursorPosition" << tmp;
 }
 
 void Vt102Emulation::reportTerminalType()

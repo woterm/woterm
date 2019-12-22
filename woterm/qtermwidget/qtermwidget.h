@@ -92,6 +92,10 @@ public:
     static QStringList availableColorSchemes();
     static void addCustomColorSchemeDir(const QString& custom_dir);
 
+    static void setDefaultColorSchemaDir(const QString& path);
+    static void setDefaultKeyboardDir(const QString& path);
+    static void setDefaultTranslationDir(const QString& path);
+
     // History size for scrolling
     void setHistorySize(int lines); //infinite if lines < 0
 

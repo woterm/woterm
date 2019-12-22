@@ -252,7 +252,7 @@ void Session::setUserTitle( int what, const QString & caption )
         return;
     }
 
-    if ( modified ) {
+    if ( modified || 1 ) {
         emit titleChanged();
     }
 }

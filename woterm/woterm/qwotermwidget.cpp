@@ -32,6 +32,8 @@ QWoTermWidget::QWoTermWidget(QWoProcess *process, QWidget *parent)
     font.setPointSize(DEFAULT_FONT_SIZE);
     setTerminalFont(font);
     setScrollBarPosition(QTermWidget::ScrollBarRight);
+    addCustomColorSchemeDir(QWoSetting::privateColorSchemaPath());
+
     setColorScheme(DEFAULT_COLOR_SCHEMA);
     setKeyBindings(DEFAULT_KEYBOARD_BINDING);
 
@@ -50,6 +52,9 @@ QWoTermWidget::QWoTermWidget(QWoProcess *process, QWidget *parent)
     QObject::connect(this, SIGNAL(sendData(const QByteArray&)), this, SLOT(onSendData(const QByteArray&)));
 
     //QTimer::singleShot(1000, this, SLOT(onTimeout()));
+    QTimer *timer = new QTimer(this);
+    QObject::connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
+    timer->start(5000);
     parseWarningText("Make Sure You Had Install lrzsz Program for upload or download");
 }
 
@@ -90,6 +95,12 @@ void QWoTermWidget::triggerPropertyCheck()
 void QWoTermWidget::onTimeout()
 {
     qDebug() << "onTimeout()";
+    //m_process->write("echo -e \"\\033[6n\"\r");
+    char tmp1[] = "\033[0c";
+    char tmp2[] = "\033[6n";
+    char tmp3[] = "\033[?1049h";
+    //m_process->write(tmp2);
+   // m_process->write("\033[0n");
 }
 
 void QWoTermWidget::onReadyReadStandardOutput()

@@ -13,6 +13,7 @@
 #include "qwosetting.h"
 #include "qwosshconf.h"
 #include "qwotermstyle.h"
+#include "qwoutils.h"
 
 int main(int argc, char *argv[])
 {
@@ -31,6 +32,10 @@ int main(int argc, char *argv[])
     if(QFile::exists(libPath)) {
         QApplication::addLibraryPath(libPath);
     }
+
+    QTermWidget::setDefaultColorSchemaDir(QWoSetting::privateColorSchemaPath());
+    QTermWidget::setDefaultKeyboardDir(QWoSetting::privateKeyboardLayoutPath());
+    QTermWidget::setDefaultTranslationDir(QWoSetting::privateTranslationPath());
 
     QWoMainWindow *mainWindow = QWoMainWindow::instance();
     mainWindow->show();

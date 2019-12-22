@@ -20,12 +20,14 @@ class QWoShower : public QStackedWidget
 private:
     typedef enum {
         ETShell = 0x01,
-        ETSsh = 0x02
+        ETSsh = 0x02,
+        ETScript = 0x03
     } ETabType;
 public:
     explicit QWoShower(QTabBar *tab, QWidget *parent=nullptr);
     virtual ~QWoShower();
     bool openLocalShell();
+    bool openScriptRuner(const QString& script);
     bool openConnection(const QString& target);
     void setBackgroundColor(const QColor& clr);
     void openFindDialog();

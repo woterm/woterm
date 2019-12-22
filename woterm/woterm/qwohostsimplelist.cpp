@@ -15,7 +15,7 @@ QWoHostSimpleList::QWoHostSimpleList(QWidget *parent)
 
     setWindowTitle(tr("jump list"));
 
-    m_model = new QWoHostListModel(this);
+    m_model = QWoHostListModel::instance();
     m_proxyModel = new QSortFilterProxyModel(this);
     m_proxyModel->setSourceModel(m_model);
     ui->hostList->setModel(m_proxyModel);
@@ -28,9 +28,6 @@ QWoHostSimpleList::QWoHostSimpleList(QWidget *parent)
 
 QWoHostSimpleList::~QWoHostSimpleList()
 {
-    if(m_model){
-        delete m_model;
-    }
     if(m_proxyModel) {
         delete m_proxyModel;
     }

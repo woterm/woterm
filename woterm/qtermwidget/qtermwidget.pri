@@ -8,6 +8,7 @@ include(../common.pri)
     LIBS += -L$$PROJECT_LIBDIR -l$$LIBWIDGET_NAME #-L指定库目录，-l指定库名
 }else{
     HEADERS += ./Emulation.h \
+        ./tools.h \
         ./Filter.h \
         ./HistorySearch.h \
         ./wcwidth.h \

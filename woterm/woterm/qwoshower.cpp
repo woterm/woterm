@@ -55,8 +55,27 @@ bool QWoShower::openConnection(const QString &target)
 {
     QWoShowerWidget *impl = new QWoTermWidgetImpl(target, m_tab,  this);
     impl->setProperty(TAB_TYPE_NAME, ETSsh);
-    impl->setProperty(TAB_TARGET_NAME, target);
     createTab(impl, target);
+    return true;
+}
+
+bool QWoShower::openConnection(const QStringList &targets)
+{
+    if(targets.isEmpty()) {
+        return false;
+    }
+    QStringList mytargets = targets;
+    QString target = mytargets.takeFirst();
+    QWoTermWidgetImpl *impl = new QWoTermWidgetImpl(target, m_tab,  this);
+    impl->setProperty(TAB_TYPE_NAME, ETSsh);
+    createTab(impl, target);
+    int row = targets.length() > 4 ? 3 : 2;
+    for(int r = 1; r < row; r++) {
+        impl->joinToVertical(mytargets.takeFirst());
+    }
+    for(int r = 0; r < row && mytargets.length() > 0; r++) {
+        impl->joinToHorizontal(r, mytargets.takeFirst());
+    }
     return true;
 }
 
@@ -165,16 +184,9 @@ bool QWoShower::tabMouseButtonPress(QMouseEvent *ev)
         QMenu menu(impl);
         m_tabMenu = &menu;
         m_tabMenu->setProperty(TAB_TARGET_IMPL, QVariant::fromValue(impl));
-        if(type == ETSsh && ok) {
-            QAction *modify = menu.addAction(QIcon(":/qwoterm/resource/skin/linkcfg.png"), tr("Edit"));
-            QObject::connect(modify, SIGNAL(triggered()), this, SLOT(onModifyThisSession()));
-            QAction *dup = menu.addAction(tr("Duplicate In New Window"));
-            QObject::connect(dup, SIGNAL(triggered()), this, SLOT(onDuplicateInNewWindow()));
-        }
-        QAction *close = menu.addAction(tr("Close This Tab"));
-        QObject::connect(close, SIGNAL(triggered()), this, SLOT(onCloseThisTabSession()));
-        QAction *other = menu.addAction(tr("Close Other Tab"));
-        QObject::connect(other, SIGNAL(triggered()), this, SLOT(onCloseOtherTabSession()));        
+        menu.addAction(tr("Close This Tab"), this, SLOT(onCloseThisTabSession()));
+        menu.addAction(tr("Close Other Tab"), this, SLOT(onCloseOtherTabSession()));
+        impl->handleTabContextMenu(&menu);
         menu.exec(QCursor::pos());
     }
 
@@ -222,38 +234,6 @@ void QWoShower::onTabbarDoubleClicked(int index)
     }
 }
 
-void QWoShower::onModifyThisSession()
-{
-    if(m_tabMenu == nullptr) {
-        return;
-    }
-    QVariant vimpl = m_tabMenu->property(TAB_TARGET_IMPL);
-    QWidget *impl = vimpl.value<QWidget*>();
-    if(impl == nullptr) {
-        QMessageBox::warning(this, tr("alert"), tr("failed to find impl infomation"));
-        return;
-    }
-    QVariant target = impl->property(TAB_TARGET_NAME);
-    qDebug() << "target" << target;
-    if(!target.isValid()) {
-        QMessageBox::warning(this, tr("alert"), tr("failed to find host infomation"));
-        return;
-    }
-    int idx = QWoSshConf::instance()->findHost(target.toString());
-    if(idx < 0) {
-        QMessageBox::warning(this, tr("alert"), tr("failed to find host infomation"));
-        return;
-    }
-    QWoSessionProperty dlg(QWoSessionProperty::ModifySession, idx, this);
-    QObject::connect(&dlg, SIGNAL(connect(const QString&)), QWoMainWindow::instance(), SLOT(onSessionReadyToConnect(const QString&)));
-    int ret = dlg.exec();
-    if(ret == QWoSessionProperty::Save) {
-        HostInfo hi = QWoSshConf::instance()->hostInfo(idx);
-        QWoEvent ev(QWoEvent::PropertyChanged);
-        QCoreApplication::sendEvent(impl, &ev);
-    }
-}
-
 void QWoShower::onCloseThisTabSession()
 {
     if(m_tabMenu == nullptr) {
@@ -284,25 +264,6 @@ void QWoShower::onCloseOtherTabSession()
         QWidget *target = v.value<QWidget *>();
         if(target != impl) {
             target->deleteLater();
-        }
-    }
-}
-
-void QWoShower::onDuplicateInNewWindow()
-{
-    if(m_tabMenu) {
-        QVariant vimpl = m_tabMenu->property(TAB_TARGET_IMPL);
-        QWidget *impl = vimpl.value<QWidget*>();
-        if(impl == nullptr) {
-            QMessageBox::warning(this, tr("alert"), tr("failed to find impl infomation"));
-            return;
-        }
-        QString target = impl->property(TAB_TARGET_NAME).toString();
-        if(!target.isEmpty()){
-            QString path = QApplication::applicationFilePath();
-            path.append(" ");
-            path.append(target);
-            QProcess::startDetached(path);
         }
     }
 }

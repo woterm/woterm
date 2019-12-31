@@ -10,6 +10,7 @@ class QWoTermMask;
 class QWoPasswordInput;
 class QWoTermWidgetImpl;
 class QSplitter;
+class QLabel;
 
 class QWoTermWidget : public QTermWidget
 {
@@ -20,6 +21,8 @@ public:
 
     QWoProcess *process();
     void closeAndDelete();
+
+    void splitWidget(const QString& target, bool vertical);
 
     void triggerPropertyCheck();
 
@@ -37,6 +40,8 @@ slots:
     void onPasteFromClipboard();
     void onVerticalSplitView();
     void onHorizontalSplitView();
+    void onVerticalInviteView();
+    void onHorizontalInviteView();
     void onCloseThisSession();
     void onForceToCloseThisSession();
     void onSessionReconnect();
@@ -49,11 +54,13 @@ private:
     void closeEvent(QCloseEvent *event);
     void resizeEvent(QResizeEvent *event);
     bool event(QEvent* ev);
+    bool eventFilter(QObject *obj, QEvent *event);
 private:
+    void initTitle();
     void initDefault();
     void initCustom();
     void resetProperty(QVariantMap data);
-    void splitWidget(int sz, bool vertical);
+    void resetTitlePosition();
     void replaceWidget(QSplitter *spliter, int idx, QWidget *widget);
 
     QWoTermWidgetImpl *findTermImpl();
@@ -64,6 +71,7 @@ private:
     bool handleWoEvent(QEvent *ev);
 private:
     friend class QWoTermWidgetImpl;
+    QPointer<QLabel> m_title;
     QPointer<QWoProcess> m_process;
     QPointer<QMenu> m_menu;
     QPointer<QAction> m_copy;

@@ -76,7 +76,7 @@ QWoMainWindow::QWoMainWindow(QWidget *parent)
     layout->addWidget(m_shower);
 
     QObject::connect(m_sessions, SIGNAL(readyToConnect(const QString&)), this, SLOT(onSessionReadyToConnect(const QString&)));
-    QObject::connect(m_sessions, SIGNAL(batchReadyToConnect(const QStringList&)), this, SLOT(onSessionBatchToConnect(const QStringList&)));
+    QObject::connect(m_sessions, SIGNAL(batchReadyToConnect(const QStringList&,bool)), this, SLOT(onSessionBatchToConnect(const QStringList&,bool)));
 
     QTimer::singleShot(1000, this, SLOT(onProcessStartCheck()));
 
@@ -106,15 +106,17 @@ void QWoMainWindow::closeEvent(QCloseEvent *event)
 
 void QWoMainWindow::onNewTerm()
 {
-    QWoSessionProperty dlg(QWoSessionProperty::NewSession, -1, this);
+    QWoSessionProperty dlg("", this);
     QObject::connect(&dlg, SIGNAL(connect(const QString&)), this, SLOT(onSessionReadyToConnect(const QString&)));
     dlg.exec();
+    QWoHostListModel::instance()->refreshList();
 }
 
 void QWoMainWindow::onOpenTerm()
 {
     QWoSessionManage dlg(this);
     QObject::connect(&dlg, SIGNAL(connect(const QString&)), this, SLOT(onSessionReadyToConnect(const QString&)));
+    QObject::connect(&dlg, SIGNAL(connect(const QStringList&,bool)), this, SLOT(onSessionBatchToConnect(const QStringList&,bool)));
     dlg.exec();
 }
 
@@ -134,10 +136,14 @@ void QWoMainWindow::onSessionReadyToConnect(const QString &target)
     m_shower->openConnection(target);
 }
 
-void QWoMainWindow::onSessionBatchToConnect(const QStringList &targets)
+void QWoMainWindow::onSessionBatchToConnect(const QStringList &targets,bool samepage)
 {
-    for(int i = 0; i < targets.length(); i++) {
-        m_shower->openConnection(targets.at(i));
+    if(samepage) {
+        m_shower->openConnection(targets);
+    }else{
+        for(int i = 0; i < targets.length(); i++) {
+            m_shower->openConnection(targets.at(i));
+        }
     }
 }
 
@@ -168,9 +174,7 @@ void QWoMainWindow::onShouldAppExit()
 
 void QWoMainWindow::onActionNewTriggered()
 {
-    QWoSessionProperty dlg(QWoSessionProperty::NewSession, -1, this);
-    QObject::connect(&dlg, SIGNAL(connect(const QString&)), this, SLOT(onSessionReadyToConnect(const QString&)));
-    dlg.exec();
+    onNewTerm();
 }
 
 void QWoMainWindow::onActionOpenTriggered()
@@ -225,7 +229,7 @@ void QWoMainWindow::onActionExitTriggered()
 
 void QWoMainWindow::onActionConfigDefaultTriggered()
 {
-    QWoSessionProperty dlg(QWoSessionProperty::ResetProperty, 0, this);
+    QWoSessionProperty dlg(this);
     dlg.exec();
 }
 
@@ -266,13 +270,13 @@ void QWoMainWindow::initMenuBar()
 void QWoMainWindow::initToolBar()
 {
     QToolBar *tool = ui->mainToolBar;
-    QAction *newTerm = tool->addAction(QIcon(":/qwoterm/resource/skin/add.png"), tr("New"));
+    QAction *newTerm = tool->addAction(QIcon(":/qwoterm/resource/skin/add2.png"), tr("New"));
     QObject::connect(newTerm, SIGNAL(triggered()), this, SLOT(onNewTerm()));
 
-    QAction *openTerm = tool->addAction(QIcon(":/qwoterm/resource/skin/manage.png"), tr("Manage"));
+    QAction *openTerm = tool->addAction(QIcon(":/qwoterm/resource/skin/nodes.png"), tr("Manage"));
     QObject::connect(openTerm, SIGNAL(triggered()), this, SLOT(onOpenTerm()));
 
-    QAction *lay = tool->addAction(QIcon(":/qwoterm/resource/skin/list.png"), tr("List"));
+    QAction *lay = tool->addAction(QIcon(":/qwoterm/resource/skin/layout.png"), tr("List"));
     QObject::connect(lay, SIGNAL(triggered()), this, SLOT(onLayout()));
 
 

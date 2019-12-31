@@ -15,95 +15,34 @@
 #include <QMessageBox>
 #include <QModelIndex>
 
-QWoSessionProperty::QWoSessionProperty(ETypeSession ts, int idx, QWidget *parent)
+QWoSessionProperty::QWoSessionProperty(const QString& name,  QWidget *parent)
     : QDialog(parent)
-    , m_type(ts)
-    , m_idx(idx)
+    , m_type(ModifySession)
+    , m_name(name)
     , ui(new Ui::QWoSessionProperty)
 {
-    Qt::WindowFlags flags = windowFlags();
-    setWindowFlags(flags &~Qt::WindowContextHelpButtonHint);
-    ui->setupUi(this);
-    setWindowTitle(tr("Session Property"));
-
-    if(ts != ModifySession) {
-        m_idx = -1;
-    }
-
-    m_preview = new QTermWidget(this);
-    m_preview->setScrollBarPosition(QTermWidget::ScrollBarRight);
-    ui->previewLayout->addWidget(m_preview);
-    QTimer *timer = new QTimer(this);
-    QObject::connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
-    timer->start(1000);
-
-    QStringList schemas = m_preview->availableColorSchemes();
-    schemas.sort();
-    ui->schema->setModel(new QStringListModel(schemas, this));
-    QObject::connect(ui->schema, SIGNAL(currentIndexChanged(const QString &)),  this, SLOT(onColorCurrentIndexChanged(const QString &)));
-
-    ui->port->setValidator(new QIntValidator(1, 65535));
-    ui->lineSize->setValidator(new QIntValidator(DEFAULT_HISTORY_LINE_LENGTH, 65535));
-
-    ui->fontChooser->setEditable(false);
-    ui->fontChooser->setFontFilters(QFontComboBox::MonospacedFonts);
-    QObject::connect(ui->fontChooser, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(onCurrentFontChanged(const QFont&)));
-
-    ui->tree->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    ui->tree->setModel(&m_model);
-    ui->tree->setIndentation(10);
-    ui->tree->setRootIsDecorated(true);
-
-    if(m_type == ResetProperty) {
-        ui->connect->hide();
-        ui->connectWidget->hide();
-    }else{
-        QStandardItem *connect = new QStandardItem(tr("Connect"));
-        m_model.appendRow(connect);
-        connect->appendRow(new QStandardItem(tr("Authentication")));
-    }
-
-    QStandardItem *terminal = new QStandardItem(tr("Terminal"));
-    m_model.appendRow(terminal);
-    QStandardItem *appearance = new QStandardItem(tr("Appearance"));
-    m_model.appendRow(appearance);
-    QStandardItem *fileTransfre = new QStandardItem(tr("FileTransfer"));
-    m_model.appendRow(fileTransfre);
-
-    QObject::connect(ui->tree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(onTreeItemClicked(const QModelIndex&)));
-    QModelIndex index = m_model.index(0, 0);
-    ui->tree->clicked(index);
-
-    QObject::connect(ui->blockCursor, SIGNAL(toggled(bool)), this, SLOT(onBlockCursorToggled()));
-    QObject::connect(ui->underlineCursor, SIGNAL(toggled(bool)), this, SLOT(onUnderlineCursorToggled()));
-    QObject::connect(ui->beamCursor, SIGNAL(toggled(bool)), this, SLOT(onBeamCursorToggled()));
-
-    QObject::connect(ui->authType, SIGNAL(currentIndexChanged(const QString &)),  this, SLOT(onAuthCurrentIndexChanged(const QString &)));
-    QObject::connect(ui->connect, SIGNAL(clicked()), this, SLOT(onReadyToConnect()));
-    QObject::connect(ui->applyall, SIGNAL(clicked()), this, SLOT(onApplyToAll()));
-    QObject::connect(ui->save, SIGNAL(clicked()), this, SLOT(onReadyToSave()));
-    QObject::connect(ui->cancel, SIGNAL(clicked()), this, SLOT(close()));
-
-    QObject::connect(ui->szDirBrowser, SIGNAL(clicked()), this, SLOT(onSzDirBrowser()));
-    QObject::connect(ui->rzDirBrowser, SIGNAL(clicked()), this, SLOT(onRzDirBrowser()));
-
-    QObject::connect(ui->identifyBrowser, SIGNAL(clicked()),  this, SLOT(onIdentifyBrowserClicked()));
-    QObject::connect(ui->jumpBrowser, SIGNAL(clicked()),  this, SLOT(onJumpBrowserClicked()));
-
-    QObject::connect(ui->fontSize, SIGNAL(valueChanged(int)), this, SLOT(onFontValueChanged(int)));
-
-    onAuthCurrentIndexChanged(tr("Password"));
-
-    initHistory();
-    initDefault();
-    initCustom();
-
-    ui->tree->expandAll();
+    init();
 }
+
+QWoSessionProperty::QWoSessionProperty(QWidget *parent)
+    : QDialog(parent)
+    , m_type(DefaultProperty)
+    , ui(new Ui::QWoSessionProperty)
+{
+    init();
+}
+
 
 QWoSessionProperty::~QWoSessionProperty()
 {
     delete ui;
+}
+
+void QWoSessionProperty::setButtonFlags(EButtonFlags flags)
+{
+    ui->applyall->setVisible(flags.testFlag(ButtonApplyAll));
+    ui->connect->setVisible(flags.testFlag(ButtonConnect));
+    ui->save->setVisible(flags.testFlag(ButtonSave));
 }
 
 void QWoSessionProperty::onAuthCurrentIndexChanged(const QString &txt)
@@ -292,10 +231,10 @@ void QWoSessionProperty::initHistory()
 
 void QWoSessionProperty::initCustom()
 {
-    if(m_idx < 0) {
+    if(m_name.isEmpty()) {
         return;
     }
-    HostInfo hi = QWoSshConf::instance()->hostInfo(m_idx);
+    HostInfo hi = QWoSshConf::instance()->find(m_name);
     QVariant v = QWoUtils::qBase64ToVariant(hi.property);
     QVariantMap mdata = v.toMap();
     resetProerty(mdata);
@@ -352,7 +291,7 @@ void QWoSessionProperty::resetProerty(QVariantMap mdata)
 bool QWoSessionProperty::saveConfig()
 {    
     QString property = sessionProperty();
-    if(m_type == ResetProperty) {
+    if(m_type == DefaultProperty) {
         QWoSetting::setValue("property/default", property);
     }else {
         HostInfo hi;
@@ -382,24 +321,13 @@ bool QWoSessionProperty::saveConfig()
             QMessageBox::warning(this, tr("Info"), tr("The port should be at [10,65535]"));
             return false;
         }
-        QList<int> idxs = QWoHostListModel::instance()->exists(hi.name);
-        if(m_idx > -1) {
-            if(idxs.length() > 2) {
-                QMessageBox::warning(this, tr("Info"), tr("The same name has been used."));
+        if(m_name != hi.name) {
+            if(QWoHostListModel::instance()->exists(hi.name)) {
+                QMessageBox::warning(this, tr("Info"), tr("The host name had been used.."));
                 return false;
             }
-            if(idxs.length() > 0 && idxs.indexOf(m_idx) < 0) {
-                QMessageBox::warning(this, tr("Info"), tr("The same name has been used."));
-                return false;
-            }
-            QWoHostListModel::instance()->modify(m_idx, hi);
-        }else{
-            if(idxs.length() > 0) {
-                QMessageBox::warning(this, tr("Info"), tr("The same name has been used."));
-                return false;
-            }
-            QWoHostListModel::instance()->append(hi);
         }
+        QWoHostListModel::instance()->modifyOrAppend(hi);
     }
     saveHistory();
     return true;
@@ -480,48 +408,10 @@ void QWoSessionProperty::setFixPreviewString()
 {
     m_preview->clear();
     QByteArray seqTxt;
-#if 1
     seqTxt.append("\033[31mRed \033[32mGreen \033[33mYellow \033[34mBlue");
     seqTxt.append("\r\n\033[35mMagenta \033[36mCyan \033[37mWhite \033[39mDefault");
     seqTxt.append("\r\n\033[40mBlack \033[41mRed \033[42mGreen \033[43mYellow \033[44mBlue");
     seqTxt.append("\r\n\033[45mMagenta \033[46mCyan \033[47mWhite \033[49mDefault");
-#else
-    seqTxt.append("\033[mgYw \033[40mgYw \033[41mgYw \033[42mgYw \033[43mgYw \033[44mgYw \033[45mgYw \033[46mgYw \033[47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[1mgYw \033[1;40mgYw \033[1;41mgYw \033[1;42mgYw \033[1;43mgYw \033[1;44mgYw \033[1;45mgYw \033[1;46mgYw \033[1;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[30mgYw \033[30;40mgYw \033[30;41mgYw \033[30;42mgYw \033[30;43mgYw \033[30;44mgYw \033[30;45mgYw \033[30;46mgYw \033[30;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[1;30mgYw \033[1;30;40mgYw \033[1;30;41mgYw \033[1;30;42mgYw \033[1;30;43mgYw \033[1;30;44mgYw \033[1;30;45mgYw \033[1;30;46mgYw \033[1;30;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[31mgYw \033[31;40mgYw \033[31;41mgYw \033[31;42mgYw \033[31;43mgYw \033[31;44mgYw \033[31;45mgYw \033[31;46mgYw \033[31;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[1;31mgYw \033[1;31;40mgYw \033[1;31;41mgYw \033[1;31;42mgYw \033[1;31;43mgYw \033[1;31;44mgYw \033[1;31;45mgYw \033[1;31;46mgYw \033[1;31;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[32mgYw \033[32;40mgYw \033[32;41mgYw \033[32;42mgYw \033[32;43mgYw \033[32;44mgYw \033[32;45mgYw \033[32;46mgYw \033[32;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[1;32mgYw \033[1;32;40mgYw \033[1;32;41mgYw \033[1;32;42mgYw \033[1;32;43mgYw \033[1;32;44mgYw \033[1;32;45mgYw \033[1;32;46mgYw \033[1;32;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[33mgYw \033[33;40mgYw \033[33;41mgYw \033[33;42mgYw \033[33;43mgYw \033[33;44mgYw \033[33;45mgYw \033[33;46mgYw \033[33;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[1;33mgYw \033[1;33;40mgYw \033[1;33;41mgYw \033[1;33;42mgYw \033[1;33;43mgYw \033[1;33;44mgYw \033[1;33;45mgYw \033[1;33;46mgYw \033[1;33;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[34mgYw \033[34;40mgYw \033[34;41mgYw \033[34;42mgYw \033[34;43mgYw \033[34;44mgYw \033[34;45mgYw \033[34;46mgYw \033[34;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[1;34mgYw \033[1;34;40mgYw \033[1;34;41mgYw \033[1;34;42mgYw \033[1;34;43mgYw \033[1;34;44mgYw \033[1;34;45mgYw \033[1;34;46mgYw \033[1;34;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[35mgYw \033[35;40mgYw \033[35;41mgYw \033[35;42mgYw \033[35;43mgYw \033[35;44mgYw \033[35;45mgYw \033[35;46mgYw \033[35;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[1;35mgYw \033[1;35;40mgYw \033[1;35;41mgYw \033[1;35;42mgYw \033[1;35;43mgYw \033[1;35;44mgYw \033[1;35;45mgYw \033[1;35;46mgYw \033[1;35;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[36mgYw \033[36;40mgYw \033[36;41mgYw \033[36;42mgYw \033[36;43mgYw \033[36;44mgYw \033[36;45mgYw \033[36;46mgYw \033[36;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[1;36mgYw \033[1;36;40mgYw \033[1;36;41mgYw \033[1;36;42mgYw \033[1;36;43mgYw \033[1;36;44mgYw \033[1;36;45mgYw \033[1;36;46mgYw \033[1;36;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[37mgYw \033[37;40mgYw \033[37;41mgYw \033[37;42mgYw \033[37;43mgYw \033[37;44mgYw \033[37;45mgYw \033[37;46mgYw \033[37;47mgYw ");
-    seqTxt.append("\r\n");
-    seqTxt.append("\033[1;37mgYw \033[1;37;40mgYw \033[1;37;41mgYw \033[1;37;42mgYw \033[1;37;43mgYw \033[1;37;44mgYw \033[1;37;45mgYw \033[1;37;46mgYw \033[1;37;47mgYw ");
-#endif
     m_preview->parseSequenceText(seqTxt);
     m_preview->setBlinkingCursor(true);
 }
@@ -529,4 +419,90 @@ void QWoSessionProperty::setFixPreviewString()
 void QWoSessionProperty::onTimeout()
 {
     setFixPreviewString();
+}
+
+void QWoSessionProperty::init()
+{
+    Qt::WindowFlags flags = windowFlags();
+    setWindowFlags(flags &~Qt::WindowContextHelpButtonHint);
+    ui->setupUi(this);
+
+    if(m_type == DefaultProperty) {
+        setWindowTitle(QString(tr("Session[Default]")));
+    }else{
+        setWindowTitle(QString(tr("Session[%1]")).arg(m_name.isEmpty() ? tr("New") : m_name));
+        ui->applyall->hide();
+    }
+
+    m_preview = new QTermWidget(this);
+    m_preview->setScrollBarPosition(QTermWidget::ScrollBarRight);
+    ui->previewLayout->addWidget(m_preview);
+    QTimer *timer = new QTimer(this);
+    QObject::connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
+    timer->start(1000);
+
+    QStringList schemas = m_preview->availableColorSchemes();
+    schemas.sort();
+    ui->schema->setModel(new QStringListModel(schemas, this));
+    QObject::connect(ui->schema, SIGNAL(currentIndexChanged(const QString &)),  this, SLOT(onColorCurrentIndexChanged(const QString &)));
+
+    ui->port->setValidator(new QIntValidator(1, 65535));
+    ui->lineSize->setValidator(new QIntValidator(DEFAULT_HISTORY_LINE_LENGTH, 65535));
+
+    ui->fontChooser->setEditable(false);
+    ui->fontChooser->setFontFilters(QFontComboBox::MonospacedFonts);
+    QObject::connect(ui->fontChooser, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(onCurrentFontChanged(const QFont&)));
+
+    ui->tree->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->tree->setModel(&m_model);
+    ui->tree->setIndentation(10);
+    ui->tree->setRootIsDecorated(true);
+
+    if(m_type == DefaultProperty) {
+        ui->connect->hide();
+        ui->connectWidget->hide();
+    }else{
+        QStandardItem *connect = new QStandardItem(tr("Connect"));
+        m_model.appendRow(connect);
+        QStandardItem *auth = new QStandardItem(tr("Authentication"));
+        m_model.appendRow(auth);
+        //ui->hostName->setReadOnly(!m_name.isEmpty());
+    }
+
+    QStandardItem *terminal = new QStandardItem(tr("Terminal"));
+    m_model.appendRow(terminal);
+    QStandardItem *appearance = new QStandardItem(tr("Appearance"));
+    m_model.appendRow(appearance);
+    QStandardItem *fileTransfre = new QStandardItem(tr("FileTransfer"));
+    m_model.appendRow(fileTransfre);
+
+    QObject::connect(ui->tree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(onTreeItemClicked(const QModelIndex&)));
+    QModelIndex index = m_model.index(0, 0);
+    ui->tree->clicked(index);
+
+    QObject::connect(ui->blockCursor, SIGNAL(toggled(bool)), this, SLOT(onBlockCursorToggled()));
+    QObject::connect(ui->underlineCursor, SIGNAL(toggled(bool)), this, SLOT(onUnderlineCursorToggled()));
+    QObject::connect(ui->beamCursor, SIGNAL(toggled(bool)), this, SLOT(onBeamCursorToggled()));
+
+    QObject::connect(ui->authType, SIGNAL(currentIndexChanged(const QString &)),  this, SLOT(onAuthCurrentIndexChanged(const QString &)));
+    QObject::connect(ui->connect, SIGNAL(clicked()), this, SLOT(onReadyToConnect()));
+    QObject::connect(ui->applyall, SIGNAL(clicked()), this, SLOT(onApplyToAll()));
+    QObject::connect(ui->save, SIGNAL(clicked()), this, SLOT(onReadyToSave()));
+    QObject::connect(ui->cancel, SIGNAL(clicked()), this, SLOT(close()));
+
+    QObject::connect(ui->szDirBrowser, SIGNAL(clicked()), this, SLOT(onSzDirBrowser()));
+    QObject::connect(ui->rzDirBrowser, SIGNAL(clicked()), this, SLOT(onRzDirBrowser()));
+
+    QObject::connect(ui->identifyBrowser, SIGNAL(clicked()),  this, SLOT(onIdentifyBrowserClicked()));
+    QObject::connect(ui->jumpBrowser, SIGNAL(clicked()),  this, SLOT(onJumpBrowserClicked()));
+
+    QObject::connect(ui->fontSize, SIGNAL(valueChanged(int)), this, SLOT(onFontValueChanged(int)));
+
+    onAuthCurrentIndexChanged(tr("Password"));
+
+    initHistory();
+    initDefault();
+    initCustom();
+
+    ui->tree->expandAll();
 }

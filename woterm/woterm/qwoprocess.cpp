@@ -8,8 +8,9 @@
 #include <QClipboard>
 #include <QProcess>
 
-QWoProcess::QWoProcess(QObject *parent)
+QWoProcess::QWoProcess(const QString& sessionName, QObject *parent)
     : QObject (parent)
+    , m_sessionName(sessionName)
     , m_process(new QProcess())
 {
     QObject::connect(m_process, SIGNAL(readyReadStandardOutput()), this, SLOT(onReadyReadStandardOutput()));
@@ -43,6 +44,11 @@ QStringList QWoProcess::arguments() const
 void QWoProcess::setArguments(const QStringList &arguments)
 {
     return m_process->setArguments(arguments);
+}
+
+QString QWoProcess::sessionName() const
+{
+    return m_sessionName;
 }
 
 QStringList QWoProcess::environment() const
@@ -159,24 +165,6 @@ QTermWidget *QWoProcess::termWidget()
 {
     return m_term;
 }
-
-#ifdef Q_OS_WIN
-#include <Windows.h>
-void QWoProcess::enableDebugConsole(bool on)
-{
-    m_process->setCreateProcessArgumentsModifier([on] (QProcess::CreateProcessArguments *cpa){
-        cpa->flags = CREATE_NEW_CONSOLE;
-        cpa->startupInfo->dwFlags = STARTF_USESTDHANDLES|STARTF_USESHOWWINDOW;
-        cpa->startupInfo->wShowWindow = on ? SW_SHOW : SW_HIDE;
-    });
-}
-
-#else
-void QWoProcess::enableDebugConsole(bool on)
-{
-}
-#endif
-
 
 void QWoProcess::setTermWidget(QTermWidget *widget)
 {

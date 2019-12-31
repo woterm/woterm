@@ -9,8 +9,6 @@
 #include <QVariantMap>
 #include <QScriptable>
 
-
-class QWoProcess;
 class QProcess;
 class QEventLoop;
 class QWoShellProcess;

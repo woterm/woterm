@@ -11,13 +11,15 @@ class QWoProcess : public QObject
 {
     Q_OBJECT
 public:
-    explicit QWoProcess(QObject *parent=nullptr);
+    explicit QWoProcess(const QString& sessionName, QObject *parent=nullptr);
     virtual ~QWoProcess();
     QString program() const;
     void setProgram(const QString &program);
 
     QStringList arguments() const;
     void setArguments(const QStringList & arguments);
+
+    QString sessionName() const;
 
     QStringList environment() const;
     void setEnvironment(const QStringList& env);
@@ -34,7 +36,6 @@ public:
     void closeWriteChannel();
 
     bool waitForBytesWritten(int msecs = 30000);
-    void enableDebugConsole(bool on);
 
     QTermWidget *termWidget();
 
@@ -57,6 +58,7 @@ private slots:
     void onFinished(int code);
 
 protected:
+    const QString m_sessionName;
     QPointer<QTermWidget> m_term;
     QPointer<QProcess> m_process;
 

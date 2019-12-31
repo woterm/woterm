@@ -15,6 +15,7 @@ class QWoSessionManage;
 class QTermWidget;
 class QStringListModel;
 class QSortFilterProxyModel;
+class QWoTreeView;
 
 
 class QWoSessionManage : public QDialog
@@ -27,6 +28,7 @@ public:
 
 signals:
     void connect(const QString& host);
+    void connect(const QStringList& hosts, bool samepage);
 
 private slots:
     void onEditTextChanged(const QString &txt);
@@ -34,13 +36,19 @@ private slots:
     void onDeleteReady();
     void onModifyReady();
     void onNewReady();
+    void onTreeViewOpenInSamePage();
+    void onTreeViewOpenInDifferentPage();
     void onTreeItemDoubleClicked(const QModelIndex& idx);
 private:
     void refreshList();
+    bool handleTreeViewContextMenu(QContextMenuEvent *ev);
+protected:
+    bool eventFilter(QObject *obj, QEvent *ev);
 private:
     Ui::QWoSessionManage *ui;
     QPointer<QWoHostListModel> m_model;
     QPointer<QSortFilterProxyModel> m_proxyModel;
+    QPointer<QWoTreeView> m_tree;
 };
 
 #endif // QWOSESSIONPROPERTY_H

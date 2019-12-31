@@ -5,7 +5,6 @@
 #include <QPointer>
 
 class QTermWidget;
-class QWoProcess;
 class QScriptEngine;
 class QScriptEngineDebugger;
 class QWoScriptSelector;

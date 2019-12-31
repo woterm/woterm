@@ -109,6 +109,7 @@ public:
     /** Sets the background image of the terminal display. */
     void setBackgroundImage(QString backgroundImage);
 
+    int scollBarWidth();
     /**
      * Specifies whether the terminal display has a vertical scroll bar, and if so whether it
      * is shown on the left or right side of the display.

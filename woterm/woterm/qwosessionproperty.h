@@ -21,10 +21,18 @@ class QWoSessionProperty : public QDialog
     Q_OBJECT
 public:
     enum ETypeSession{
-      NewSession = 0x1,
-      ResetProperty = 0x2,
-      ModifySession = 0x3
+      DefaultProperty = 0x1,
+      ModifySession = 0x2
     };
+
+    enum EButtonFlag{
+        ButtonConnect = 0x1,
+        ButtonSave = 0x1 << 1,
+        ButtonApplyAll = 0x1 << 2,
+
+        All = ButtonConnect|ButtonSave|ButtonApplyAll
+    };
+
 
     enum EResult {
         Rejected = QDialog::Rejected,
@@ -33,10 +41,13 @@ public:
         Save,
         Cancel
     };
+    Q_DECLARE_FLAGS(EButtonFlags, EButtonFlag)
 public:
-    explicit QWoSessionProperty(ETypeSession ts, int idx, QWidget *parent = nullptr);
+    explicit QWoSessionProperty(QWidget *parent = nullptr);
+    explicit QWoSessionProperty(const QString& name, QWidget *parent = nullptr);
     virtual ~QWoSessionProperty();
 
+    void setButtonFlags(EButtonFlags flags);
 signals:
     void connect(const QString& host);
 
@@ -74,10 +85,12 @@ private:
 
 private slots:
     void onTimeout();
-
+private:
+    QWoSessionProperty(ETypeSession ts, const QString& name, QWidget *parent);
+    void init();
 private:
     const ETypeSession m_type;
-    int m_idx;
+    QString m_name;
     Ui::QWoSessionProperty *ui;
     QStandardItemModel m_model;
     QPointer<QTermWidget> m_preview;

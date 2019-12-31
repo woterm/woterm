@@ -7,7 +7,6 @@
 #include <QPointer>
 #include <QScriptValue>
 
-class QWoProcess;
 class QProcess;
 class QEventLoop;
 class QLocalServer;

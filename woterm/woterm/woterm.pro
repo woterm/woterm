@@ -48,7 +48,10 @@ SOURCES += main.cpp \
     qwolocalcommand.cpp \
     qwoshellprocess.cpp \
     qwocmdspy.cpp \
-    qworesult.cpp
+    qworesult.cpp \
+    qwolistview.cpp \
+    qwotreeview.cpp \
+    qwocommandlineinput.cpp
 
 HEADERS += \
     vte.h \
@@ -90,7 +93,10 @@ HEADERS += \
     qwoshellprocess.h \
     qwocmdspy.h \
     qwoscript.h \
-    qworesult.h
+    qworesult.h \
+    qwolistview.h \
+    qwotreeview.h \
+    qwocommandlineinput.h
 
 
 FORMS += \
@@ -104,6 +110,7 @@ FORMS += \
     qwotermmask.ui \
     qwopasswordinput.ui \
     qwoaboutdialog.ui \
-    qwoscriptselector.ui
+    qwoscriptselector.ui \
+    qwocommandlineinput.ui
 
 RESOURCES += qwoterm.qrc

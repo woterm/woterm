@@ -23,11 +23,9 @@ public:
     int widthColumn(const QFont& ft, int i);
 
     void refreshList();
-    void add(const HostInfo& hi);
-    QList<int> exists(const QString &name);
+    bool exists(const QString &name);
     void resetAllProperty(QString v);
-    void modify(int idx, const HostInfo &hi);
-    void append(const HostInfo& hi);
+    void modifyOrAppend(const HostInfo& hi);
 private:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QModelIndex sibling(int row, int column, const QModelIndex &idx) const override;

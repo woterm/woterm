@@ -4,6 +4,7 @@
 #include "qwohostinfoedit.h"
 #include "qwohostlistmodel.h"
 #include "qwosessionproperty.h"
+#include "qwolistview.h"
 
 #include <QCloseEvent>
 #include <QVBoxLayout>
@@ -22,6 +23,9 @@
 #include <QMenu>
 #include <QAction>
 #include <QPlainTextEdit>
+#include <QMessageBox>
+
+#define MAX_TRY_LEFT  (10)
 
 QWoSessionList::QWoSessionList(QWidget *parent)
     : QWidget(parent)
@@ -33,20 +37,17 @@ QWoSessionList::QWoSessionList(QWidget *parent)
 
     QHBoxLayout *hlayout = new QHBoxLayout(this);
     layout->addLayout(hlayout);
-    m_list = new QListView(this);
+    m_list = new QWoListView(this);
     m_input = new QLineEdit(this);
     m_info = new QPlainTextEdit(this);
-    QPushButton *all = new QPushButton("all", this);
-    all->setMaximumWidth(25);
-    all->hide();
     hlayout->addWidget(m_input);
-    hlayout->addWidget(all);
     layout->addWidget(m_list);
     layout->addWidget(m_info);
     m_info->setReadOnly(true);
     m_info->setFixedHeight(150);
     m_list->installEventFilter(this);
-    //m_list->setSelectionMode(QAbstractItemView::MultiSelection);
+    m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_list->setSelectionMode(QAbstractItemView::MultiSelection);
 
     m_model = QWoHostListModel::instance();
     m_proxyModel = new QSortFilterProxyModel(this);
@@ -54,18 +55,16 @@ QWoSessionList::QWoSessionList(QWidget *parent)
     m_list->setModel(m_proxyModel);
     refreshList();
 
-    m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    //m_list->setSelectionMode(QAbstractItemView::MultiSelection);
-
     QObject::connect(m_input, SIGNAL(returnPressed()), this, SLOT(onEditReturnPressed()));
-    QObject::connect(all, SIGNAL(clicked()), this, SLOT(onOpenSelectSessions()));
     QObject::connect(m_input, SIGNAL(textChanged(const QString&)), this, SLOT(onEditTextChanged(const QString&)));
     QObject::connect(m_list, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(onListItemDoubleClicked(const QModelIndex&)));
-    QObject::connect(m_list, SIGNAL(pressed(const QModelIndex&)), this, SLOT(onListItemPressed(const QModelIndex&)));
+    QObject::connect(m_list, SIGNAL(itemChanged(const QModelIndex&)), this, SLOT(onListCurrentItemChanged(const QModelIndex&)));
+    QObject::connect(m_list, SIGNAL(returnKeyPressed()), this, SLOT(onListReturnKeyPressed()));
+
     QTimer *timer = new QTimer(this);
     QObject::connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
-    timer->start(1000);
-    m_countLeft = 0;
+    timer->start(3000);
+    m_countLeft = -1;
 }
 
 QWoSessionList::~QWoSessionList()
@@ -93,21 +92,9 @@ void QWoSessionList::onReloadSessionList()
     refreshList();
 }
 
-void QWoSessionList::onOpenSelectSessions()
-{
-    int cnt = m_proxyModel->rowCount();
-    qDebug() << "rowCount:" << cnt;
-    QStringList sessions;
-    for(int i = 0; i < cnt; i++) {
-        QModelIndex mi = m_proxyModel->index(i, 0);
-        sessions << mi.data().toString();
-    }
-    emit batchReadyToConnect(sessions);
-}
-
 void QWoSessionList::onEditTextChanged(const QString &txt)
 {
-    m_countLeft = 30;
+    m_countLeft = MAX_TRY_LEFT;
     QStringList sets = txt.split(' ');
     for(QStringList::iterator iter = sets.begin(); iter != sets.end(); ) {
         if(*iter == "") {
@@ -120,6 +107,11 @@ void QWoSessionList::onEditTextChanged(const QString &txt)
     QRegExp regex(sets.join(".*"), Qt::CaseInsensitive);
     regex.setPatternSyntax(QRegExp::RegExp2);
     m_proxyModel->setFilterRegExp(regex);
+    QModelIndex idx = m_proxyModel->index(0, 0);
+    if(idx.isValid()) {
+        m_list->clearSelection();
+        m_list->setCurrentIndex(idx);
+    }
 }
 
 void QWoSessionList::onListItemDoubleClicked(const QModelIndex &item)
@@ -129,12 +121,10 @@ void QWoSessionList::onListItemDoubleClicked(const QModelIndex &item)
         return;
     }
     qDebug() << "server:" << hi.name;
-
-    onListItemPressed(item);
     emit readyToConnect(hi.name);
 }
 
-void QWoSessionList::onListItemPressed(const QModelIndex &item)
+void QWoSessionList::onListCurrentItemChanged(const QModelIndex &item)
 {
     HostInfo hi = item.data(ROLE_HOSTINFO).value<HostInfo>();
     if(hi.name == "") {
@@ -148,10 +138,26 @@ void QWoSessionList::onListItemPressed(const QModelIndex &item)
     m_info->setPlainText(info);
 }
 
+void QWoSessionList::onListReturnKeyPressed()
+{
+    QModelIndex idx = m_list->currentIndex();
+    if(idx.isValid()){
+        const HostInfo& hi = idx.data(ROLE_HOSTINFO).value<HostInfo>();
+        emit readyToConnect(hi.name);
+    }
+}
+
 void QWoSessionList::onTimeout()
 {
+    qDebug() << "m_countLeft" << m_countLeft;
     if(m_countLeft < 0) {
         return;
+    }
+    QPoint screenPt = QCursor::pos();
+    QPoint pt = mapFromGlobal(screenPt);
+    QRect rt = rect();
+    if(rt.contains(pt)) {
+        m_countLeft = MAX_TRY_LEFT;
     }
     if(m_countLeft > 0) {
         m_countLeft--;
@@ -171,8 +177,9 @@ void QWoSessionList::onEditReturnPressed()
         return;
     }
     QModelIndex idx = m_list->currentIndex();
-    if(idx.isValid()) {
-        idx = m_proxyModel->index(0, 0);
+
+    if(!idx.isValid()) {
+        return;
     }
     const HostInfo& hi = idx.data(ROLE_HOSTINFO).value<HostInfo>();
     emit readyToConnect(hi.name);
@@ -181,8 +188,8 @@ void QWoSessionList::onEditReturnPressed()
 void QWoSessionList::onListViewItemOpen()
 {
     QModelIndex idx = m_list->currentIndex();
-    if(idx.isValid()) {
-        idx = m_proxyModel->index(0, 0);
+    if(!idx.isValid()) {
+        return;
     }
     const HostInfo& hi = idx.data(ROLE_HOSTINFO).value<HostInfo>();
     emit readyToConnect(hi.name);
@@ -195,12 +202,12 @@ void QWoSessionList::onListViewItemReload()
 
 void QWoSessionList::onListViewItemModify()
 {
-    QVariant target = m_menu->property("itemIndex");
-    if(!target.isValid()) {
+    QModelIndex idx = m_list->currentIndex();
+    if(!idx.isValid()) {
         return;
     }
-    int idx = target.toInt();
-    QWoSessionProperty dlg(QWoSessionProperty::ModifySession, idx, this);
+    const HostInfo& hi = idx.data(ROLE_HOSTINFO).value<HostInfo>();
+    QWoSessionProperty dlg(hi.name, this);
     QObject::connect(&dlg, SIGNAL(connect(const QString&)), this, SIGNAL(readyToConnect(const QString&)));
     dlg.exec();
     refreshList();
@@ -208,7 +215,7 @@ void QWoSessionList::onListViewItemModify()
 
 void QWoSessionList::onListViewItemAdd()
 {
-    QWoSessionProperty dlg(QWoSessionProperty::NewSession, 0, this);
+    QWoSessionProperty dlg("", this);
     QObject::connect(&dlg, SIGNAL(connect(const QString&)), this, SIGNAL(readyToConnect(const QString&)));
     dlg.exec();
     refreshList();
@@ -216,35 +223,79 @@ void QWoSessionList::onListViewItemAdd()
 
 void QWoSessionList::onListViewItemDelete()
 {
-    QVariant target = m_menu->property("itemIndex");
-    if(target.isValid()) {
-        QWoSshConf::instance()->removeAt(target.toInt());
-        refreshList();
+    QMessageBox::StandardButton btn = QMessageBox::warning(this, "delete", "delete all the selective items?", QMessageBox::Ok|QMessageBox::No);
+    if(btn == QMessageBox::No) {
+        return ;
+    }
+    QItemSelectionModel *model = m_list->selectionModel();
+    QModelIndexList idxs = model->selectedIndexes();
+    for(int i = 0; i < idxs.length(); i++) {
+        QModelIndex idx = idxs.at(i);
+        QString name = idx.data().toString();
+        QWoSshConf::instance()->remove(name);
+    }
+    refreshList();
+}
+
+void QWoSessionList::onListViewOpenInSamePage()
+{
+    QItemSelectionModel *model = m_list->selectionModel();
+    QModelIndexList idxs = model->selectedIndexes();
+    if(idxs.length() > 6) {
+        QMessageBox::information(this, tr("Info"), tr("can't open over 6 session in same page."));
+        return;
+    }
+    QStringList targets;
+    for(int i = 0; i < idxs.length(); i++) {
+        QModelIndex idx = idxs.at(i);
+        QString name = idx.data().toString();
+        targets.append(name);
+    }
+    if(!targets.isEmpty()){
+        emit batchReadyToConnect(targets, true);
+    }
+}
+
+void QWoSessionList::onListViewOpenInDifferentPage()
+{
+    QItemSelectionModel *model = m_list->selectionModel();
+    QModelIndexList idxs = model->selectedIndexes();
+    QStringList targets;
+    for(int i = 0; i < idxs.length(); i++) {
+        QModelIndex idx = idxs.at(i);
+        QString name = idx.data().toString();
+        targets.append(name);
+    }
+    if(!targets.isEmpty()){
+        emit batchReadyToConnect(targets, false);
     }
 }
 
 bool QWoSessionList::handleListViewContextMenu(QContextMenuEvent *ev)
 {
-    QModelIndex mi = m_list->indexAt(ev->pos());
-    if(m_menu == nullptr) {
-        m_menu = new QMenu();
-        m_itemOpen = m_menu->addAction(QIcon(":/qwoterm/resource/skin/connect.png"), tr("Connect"), this, SLOT(onListViewItemOpen()));
-        m_menu->addAction(QIcon(":/qwoterm/resource/skin/reload.png"), tr("ReloadAll"), this, SLOT(onListViewItemReload()));
-        m_menu->addAction(QIcon(":/qwoterm/resource/skin/linkcfg.png"), tr("Edit"), this, SLOT(onListViewItemModify()));
-        m_menu->addAction(QIcon(":/qwoterm/resource/skin/add.png"), tr("Add"), this, SLOT(onListViewItemAdd()));
-        m_menu->addAction(tr("Delete"), this, SLOT(onListViewItemDelete()));
-    }    
-    QVariant target = mi.data();
-    m_itemOpen->setVisible(mi.isValid());
-    if(!mi.isValid()) {
-        m_list->clearSelection();
+    QItemSelectionModel *model = m_list->selectionModel();
+    QModelIndexList idxs = model->selectedIndexes();
+
+    QMenu menu(this);
+    m_menu = &menu;
+
+    if(idxs.isEmpty()) {
+        menu.addAction(QIcon(":/qwoterm/resource/skin/reload.png"), tr("ReloadAll"), this, SLOT(onListViewItemReload()));
+        menu.addAction(QIcon(":/qwoterm/resource/skin/add.png"), tr("Add"), this, SLOT(onListViewItemAdd()));
+    }else if(idxs.length() == 1) {
+        menu.addAction(QIcon(":/qwoterm/resource/skin/reload.png"), tr("ReloadAll"), this, SLOT(onListViewItemReload()));
+        menu.addAction(QIcon(":/qwoterm/resource/skin/add.png"), tr("Add"), this, SLOT(onListViewItemAdd()));
+        menu.addAction(QIcon(":/qwoterm/resource/skin/connect.png"), tr("Connect"), this, SLOT(onListViewItemOpen()));
+        menu.addAction(QIcon(":/qwoterm/resource/skin/palette.png"), tr("Edit"), this, SLOT(onListViewItemModify()));
+        menu.addAction(tr("Delete"), this, SLOT(onListViewItemDelete()));
+    }else{
+        menu.addAction(tr("Delete"), this, SLOT(onListViewItemDelete()));
+        menu.addAction(tr("Open in same page"), this, SLOT(onListViewOpenInSamePage()));
+        menu.addAction(tr("Open in different page"), this, SLOT(onListViewOpenInDifferentPage()));
     }
-    QVariant idx = mi.data(ROLE_INDEX);
-    m_menu->setProperty("itemIndex", idx);
     m_menu->exec(ev->globalPos());
     return true;
 }
-
 
 void QWoSessionList::closeEvent(QCloseEvent *event)
 {
@@ -260,8 +311,12 @@ bool QWoSessionList::eventFilter(QObject *obj, QEvent *ev)
     QEvent::Type t = ev->type();
     if(obj == m_list) {
         if(t == QEvent::ContextMenu) {
-            return handleListViewContextMenu((QContextMenuEvent *)ev);
+            return handleListViewContextMenu(dynamic_cast<QContextMenuEvent*>(ev));
+        }else if(t == QEvent::Enter || t == QEvent::Leave) {
+            if(!m_input->text().isEmpty()){
+                m_countLeft = MAX_TRY_LEFT;
+            }
         }
     }
-    return false;
+    return QWidget::eventFilter(obj, ev);
 }

@@ -99,6 +99,7 @@ public:
     // History size for scrolling
     void setHistorySize(int lines); //infinite if lines < 0
 
+    int scrollBarWidth();
     // Presence of scrollbar
     void setScrollBarPosition(ScrollBarPosition);
 

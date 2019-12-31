@@ -3,6 +3,7 @@
 #include<QSettings>
 #include<QApplication>
 #include<QDir>
+#include<QMessageBox>
 
 QSettings *qSettings()
 {
@@ -31,13 +32,15 @@ QString QWoSetting::applicationDataPath()
         if(QFileInfo::exists(flag)) {
             dataPath = privateDataPath() + "/../data/";
         }
-        QFileInfo fi(dataPath);
-        if(fi.exists() && !fi.isDir()) {
-            QDir dir;
-            dir.rmpath(dataPath);
-            dir.mkpath(dataPath);
-        }
         userDataPath = QDir::cleanPath(dataPath);
+        QFileInfo fi(userDataPath);
+        //QMessageBox::warning(nullptr, userDataPath, userDataPath);
+        if(!fi.exists() || !fi.isDir()) {
+            QDir dir;
+            dir.rmpath(userDataPath);
+            dir.mkpath(userDataPath);
+
+        }
     }
     return userDataPath;
 }

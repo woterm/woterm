@@ -31,5 +31,11 @@
         <file>resource/skin/palette.png</file>
         <file>resource/skin/pattern2.png</file>
         <file>resource/skin/style.png</file>
+        <file>resource/skin/nodes.png</file>
+        <file>resource/skin/add2.png</file>
+        <file>resource/skin/haddsplit.png</file>
+        <file>resource/skin/vaddsplit.png</file>
+        <file>resource/skin/layout.png</file>
+        <file>resource/skin/layout2.png</file>
     </qresource>
 </RCC>

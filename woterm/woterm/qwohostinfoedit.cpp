@@ -14,20 +14,19 @@
 QWoHostInfoEdit::QWoHostInfoEdit(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::QWoHostInfo)
-    , m_idx(-1)
 {
     init();
     setWindowTitle(tr("Add"));
 }
 
-QWoHostInfoEdit::QWoHostInfoEdit(int idx, QWidget *parent)
+QWoHostInfoEdit::QWoHostInfoEdit(const QString& name, QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::QWoHostInfo)
-    , m_idx(idx)
+    , m_name(name)
 {
     init();
     setWindowTitle(tr("Modify"));
-    HostInfo hi = QWoSshConf::instance()->hostInfo(m_idx);
+    HostInfo hi = QWoSshConf::instance()->find(name);
     ui->hostName->setText(hi.name);
     ui->host->setText(hi.host);
     ui->port->setText(QString("%1").arg(hi.port));
@@ -81,11 +80,11 @@ void QWoHostInfoEdit::onButtonSaveClicked()
         return;
     }
     close();
-    if(m_idx < 0) {
+    if(m_name.isEmpty()) {
         QWoSshConf::instance()->append(hi);
         return;
     }
-    QWoSshConf::instance()->modify(m_idx, hi);
+    QWoSshConf::instance()->modify(hi);
     if(!hi.identityFile.isEmpty())
     {
         QVariant v = QWoSetting::value("history/identifyList");

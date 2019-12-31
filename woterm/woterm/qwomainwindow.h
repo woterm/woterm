@@ -32,7 +32,7 @@ private slots:
     void onLayout();
     void onEditConfig();
     void onSessionReadyToConnect(const QString& target);
-    void onSessionBatchToConnect(const QStringList& targets);
+    void onSessionBatchToConnect(const QStringList& targets,bool samepage);
     void onProcessStartCheck();
     void onAppStart();
     void onShouldAppExit();

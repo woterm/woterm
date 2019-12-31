@@ -11,7 +11,6 @@ class QWoUsageWidget;
 class QMenu;
 
 #define TAB_TYPE_NAME ("tabtype")
-#define TAB_TARGET_NAME ("target")
 #define TAB_TARGET_IMPL ("tabimpl")
 
 class QWoShower : public QStackedWidget
@@ -29,6 +28,7 @@ public:
     bool openLocalShell();
     bool openScriptRuner(const QString& script);
     bool openConnection(const QString& target);
+    bool openConnection(const QStringList& targets);
     void setBackgroundColor(const QColor& clr);
     void openFindDialog();
 
@@ -55,11 +55,9 @@ private slots:
     void onTabCurrentChanged(int index);
     void onTermImplDestroy(QObject *it);
     void onTabbarDoubleClicked(int index);
-
-    void onModifyThisSession();
     void onCloseThisTabSession();
     void onCloseOtherTabSession();
-    void onDuplicateInNewWindow();
+
 private:
     QPointer<QTabBar> m_tab;
     QPointer<QMenu> m_tabMenu;

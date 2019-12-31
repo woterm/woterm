@@ -61,7 +61,7 @@ QWoSshConf *QWoSshConf::instance()
     return &sc;
 }
 
-QList<HostInfo> QWoSshConf::parse(const QByteArray& buf)
+QHash<QString, HostInfo> QWoSshConf::parse(const QByteArray& buf)
 {
     QList<QByteArray> lines = buf.split('\n');
     QList<QStringList> blocks;
@@ -144,7 +144,7 @@ QList<HostInfo> QWoSshConf::parse(const QByteArray& buf)
             }
         }
     }
-    QList<HostInfo> hosts;
+    QHash<QString, HostInfo> hosts;
     for(QHash<QString,HostInfo>::iterator iter = common.begin(); iter != common.end(); iter++) {
         QString name = iter.key();
         HostInfo hi = iter.value();
@@ -164,9 +164,9 @@ QList<HostInfo> QWoSshConf::parse(const QByteArray& buf)
             copyHostInfo(hi, hiTmp);
         }
 
-        hosts.push_back(hi);
+        hosts.insert(hi.name, hi);
     }
-    std::sort(hosts.begin(), hosts.end(), lessThan);
+
     return hosts;
 }
 
@@ -196,8 +196,10 @@ bool QWoSshConf::exportTo(const QString &path)
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)){
         return false;
     }
-    for(int i = 0; i < m_hosts.length(); i++) {
-        HostInfo hi = m_hosts.at(i);
+    QList<QString> hosts = m_hosts.keys();
+    std::sort(hosts.begin(), hosts.end());
+    for(int i = 0; i < hosts.length(); i++) {
+        HostInfo hi = m_hosts[hosts.at(i)];
         file.write("\n", 1);
         if(!hi.memo.isEmpty()) {
             QStringList comments = hi.memo.split('\n');
@@ -246,61 +248,54 @@ bool QWoSshConf::exportTo(const QString &path)
     return true;
 }
 
-void QWoSshConf::removeAt(int idx)
-{
-    m_hosts.removeAt(idx);
-}
-
 void QWoSshConf::remove(const QString &name)
 {
-    int idx = findHost(name);
-    if(idx >= 0) {
-        m_hosts.removeAt(idx);
-    }
+    m_hosts.remove(name);
     save();
 }
 
-void QWoSshConf::append(const HostInfo &hi)
+bool QWoSshConf::modify(const HostInfo &hi)
 {
-    m_hosts.push_back(hi);
-    std::sort(m_hosts.begin(), m_hosts.end(), lessThan);
-    save();
+    if(!m_hosts.contains(hi.name)) {
+        return false;
+    }
+    m_hosts.insert(hi.name, hi);
+    return save();
 }
 
-void QWoSshConf::modify(int idx, const HostInfo &hi)
+bool QWoSshConf::append(const HostInfo &hi)
 {
-    if(idx < 0 || idx >= m_hosts.length()) {
-        return;
+    if(m_hosts.contains(hi.name)) {
+        return false;
     }
-    m_hosts[idx] = hi;
-    std::sort(m_hosts.begin(), m_hosts.end(), lessThan);
-    save();
+    m_hosts.insert(hi.name, hi);
+    return save();
+}
+
+bool QWoSshConf::modifyOrAppend(const HostInfo &hi)
+{
+    m_hosts.insert(hi.name, hi);
+    return save();
 }
 
 void QWoSshConf::resetAllProperty(const QString &v)
 {
-    for(int i = 0; i < m_hosts.length(); i++) {
-        m_hosts[i].property = v;
+    for(QHash<QString, HostInfo>::iterator iter = m_hosts.begin(); iter != m_hosts.end(); iter++) {
+        HostInfo& hi = iter.value();
+        hi.property = v;
     }
     save();
 }
 
-QList<int> QWoSshConf::exists(const QString &name)
+bool QWoSshConf::exists(const QString &name)
 {
-    QList<int> idxs;
-    for(int i = 0; i < m_hosts.length(); i++) {
-        if(m_hosts[i].name == name) {
-            idxs.append(i);
-        }
-    }
-    return idxs;
+    return m_hosts.contains(name);
 }
 
 void QWoSshConf::updatePassword(const QString &name, const QString &password)
 {
-    int idx = findHost(name);
-    if(idx >= 0) {
-        HostInfo &hi = m_hosts[idx];
+    if(m_hosts.contains(name)) {
+        HostInfo &hi = m_hosts[name];
         hi.password = password;
         save();
     }
@@ -308,36 +303,18 @@ void QWoSshConf::updatePassword(const QString &name, const QString &password)
 
 QList<HostInfo> QWoSshConf::hostList() const
 {
-    return m_hosts;
+    QList<HostInfo> hosts = m_hosts.values();
+    std::sort(hosts.begin(), hosts.end(), lessThan);
+    return hosts;
 }
 
 QStringList QWoSshConf::hostNameList() const
 {
-    QStringList names;
-    for(int i = 0; i < m_hosts.length(); i++) {
-        const HostInfo &hi = m_hosts.at(i);
-        names.push_back(hi.name);
-    }
+    QStringList names = m_hosts.keys();
+    std::sort(names.begin(), names.end());
     return names;
 }
 
-int QWoSshConf::findHost(const QString &name)
-{
-    for(int i = 0; i < m_hosts.length(); i++) {
-        const HostInfo& hi = m_hosts.at(i);
-        if(hi.name == name) {
-            return i;
-        }
-    }
-    return -1;
+HostInfo QWoSshConf::find(const QString &name) {
+    return m_hosts.value(name);
 }
-
-HostInfo QWoSshConf::hostInfo(int i)
-{
-    if(i < m_hosts.length() && i >= 0) {
-        return m_hosts.at(i);
-    }
-    HostInfo hi;
-    return hi;
-}
-

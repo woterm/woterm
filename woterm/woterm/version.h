@@ -1,3 +1,3 @@
 #pragma once
 
-#define WOTERM_VERSION   ("2.0.0")
+#define WOTERM_VERSION   ("2.1.1")

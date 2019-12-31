@@ -51,13 +51,7 @@ void QWoHostListModel::refreshList()
     }
 }
 
-void QWoHostListModel::add(const HostInfo& hi)
-{
-    QWoSshConf::instance()->append(hi);
-    refreshList();
-}
-
-QList<int> QWoHostListModel::exists(const QString &name)
+bool QWoHostListModel::exists(const QString &name)
 {
     return QWoSshConf::instance()->exists(name);
 }
@@ -68,16 +62,11 @@ void QWoHostListModel::resetAllProperty(QString v)
     refreshList();
 }
 
-void QWoHostListModel::modify(int idx, const HostInfo &hi)
+void QWoHostListModel::modifyOrAppend(const HostInfo &hi)
 {
-    QWoSshConf::instance()->modify(idx, hi);
-    refreshList();
-}
-
-void QWoHostListModel::append(const HostInfo &hi)
-{
-    QWoSshConf::instance()->append(hi);
-    refreshList();
+    if(QWoSshConf::instance()->modifyOrAppend(hi)){
+        refreshList();
+    }
 }
 
 int QWoHostListModel::rowCount(const QModelIndex &parent) const

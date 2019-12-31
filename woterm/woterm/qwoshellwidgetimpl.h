@@ -6,7 +6,6 @@
 
 class QSplitter;
 class QWoTermWidget;
-class QWoProcess;
 
 class QWoShellWidgetImpl : public QWoShowerWidget
 {

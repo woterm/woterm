@@ -9,12 +9,14 @@
 #include "qwotermwidgetimpl.h"
 #include "qwopasswordinput.h"
 #include "qwoevent.h"
+#include "qwohostsimplelist.h"
 
 #include <QApplication>
 #include <QDebug>
 #include <QMenu>
 #include <QClipboard>
 #include <QSplitter>
+#include <QLabel>
 
 
 QWoTermWidget::QWoTermWidget(QWoProcess *process, QWidget *parent)
@@ -40,6 +42,7 @@ QWoTermWidget::QWoTermWidget(QWoProcess *process, QWidget *parent)
     setBlinkingCursor(true);
     setBidiEnabled(true);
 
+    initTitle();
     initDefault();
     initCustom();
 
@@ -52,9 +55,9 @@ QWoTermWidget::QWoTermWidget(QWoProcess *process, QWidget *parent)
     QObject::connect(this, SIGNAL(sendData(const QByteArray&)), this, SLOT(onSendData(const QByteArray&)));
 
     //QTimer::singleShot(1000, this, SLOT(onTimeout()));
-    QTimer *timer = new QTimer(this);
-    QObject::connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
-    timer->start(5000);
+    //QTimer *timer = new QTimer(this);
+    //QObject::connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
+    //timer->start(5000);
     parseWarningText("Make Sure You Had Install lrzsz Program for upload or download");
 }
 
@@ -156,14 +159,34 @@ void QWoTermWidget::onPasteFromClipboard()
 
 void QWoTermWidget::onVerticalSplitView()
 {
-    int sz = height() / 2;
-    splitWidget(sz, true);
+    splitWidget(m_process->sessionName(), true);
 }
 
 void QWoTermWidget::onHorizontalSplitView()
 {
-    int sz = width() / 2;
-    splitWidget(sz, false);
+    splitWidget(m_process->sessionName(), false);
+}
+
+void QWoTermWidget::onVerticalInviteView()
+{
+    QWoHostSimpleList dlg(this);
+    dlg.setWindowTitle(tr("session list"));
+    dlg.exec();
+    HostInfo hi;
+    if(dlg.result(&hi)) {
+        splitWidget(hi.name, true);
+    }
+}
+
+void QWoTermWidget::onHorizontalInviteView()
+{
+    QWoHostSimpleList dlg(this);
+    dlg.setWindowTitle(tr("session list"));
+    dlg.exec();
+    HostInfo hi;
+    if(dlg.result(&hi)) {
+        splitWidget(hi.name, false);
+    }
 }
 
 void QWoTermWidget::onCloseThisSession()
@@ -219,6 +242,10 @@ void QWoTermWidget::contextMenuEvent(QContextMenuEvent *e)
         QObject::connect(vsplit, SIGNAL(triggered()), this, SLOT(onVerticalSplitView()));
         QAction *hsplit = m_menu->addAction(QIcon(":/qwoterm/resource/skin/hsplit.png"), tr("Split Horizontal"));
         QObject::connect(hsplit, SIGNAL(triggered()), this, SLOT(onHorizontalSplitView()));
+        QAction *vinvite = m_menu->addAction(QIcon(":/qwoterm/resource/skin/vaddsplit.png"), tr("Add To Vertical"));
+        QObject::connect(vinvite, SIGNAL(triggered()), this, SLOT(onVerticalInviteView()));
+        QAction *hinvite = m_menu->addAction(QIcon(":/qwoterm/resource/skin/haddsplit.png"), tr("Add To Horizontal"));
+        QObject::connect(hinvite, SIGNAL(triggered()), this, SLOT(onHorizontalInviteView()));
         QAction *close = m_menu->addAction(tr("Close Session"));
         QObject::connect(close, SIGNAL(triggered()), this, SLOT(onCloseThisSession()));
     }
@@ -244,15 +271,17 @@ void QWoTermWidget::closeEvent(QCloseEvent *event)
 }
 
 void QWoTermWidget::resizeEvent(QResizeEvent *event)
-{
+{    
+    QTermWidget::resizeEvent(event);
     QSize sz = event->size();
+
     if(m_mask) {
         m_mask->setGeometry(0, 0, sz.width(), sz.height());
     }
     if(m_passInput) {
         m_passInput->setGeometry(0, 0, sz.width(), sz.height());
     }
-    QTermWidget::resizeEvent(event);
+    resetTitlePosition();
 }
 
 bool QWoTermWidget::event(QEvent *ev)
@@ -261,6 +290,33 @@ bool QWoTermWidget::event(QEvent *ev)
         return handleWoEvent(ev);
     }
     return QTermWidget::event(ev);
+}
+
+bool QWoTermWidget::eventFilter(QObject *obj, QEvent *ev)
+{
+    QEvent::Type type = ev->type();
+    if(type == QEvent::Enter) {
+        QLabel *label = qobject_cast<QLabel*>(obj);
+        if(label) {
+            bool top = m_title->property("position").toBool();
+            m_title->setProperty("position", !top);
+            resetTitlePosition();
+        }
+    }
+    return QTermWidget::eventFilter(obj, ev);
+}
+
+void QWoTermWidget::initTitle()
+{
+    QString title = m_process->sessionName();
+    m_title = new QLabel(title, this);
+    m_title->setAutoFillBackground(true);
+    QPalette pal(Qt::gray);
+    m_title->setPalette(pal);
+    m_title->setContentsMargins(5, 2, 5, 2);
+    m_title->setTextInteractionFlags(Qt::NoTextInteraction);
+    m_title->setProperty("position", true);
+    m_title->installEventFilter(this);
 }
 
 void QWoTermWidget::initDefault()
@@ -272,12 +328,8 @@ void QWoTermWidget::initDefault()
 
 void QWoTermWidget::initCustom()
 {
-    QWoSshProcess *sshprocess = qobject_cast<QWoSshProcess*>(m_process);
-    if(sshprocess == nullptr) {
-        return;
-    }
-    QString target = sshprocess->target();
-    HostInfo hi = QWoSshConf::instance()->findHostInfo(target);
+    QString target = m_process->sessionName();
+    HostInfo hi = QWoSshConf::instance()->find(target);
     QVariantMap mdata = QWoUtils::qBase64ToVariant(hi.property).toMap();
     resetProperty(mdata);
 }
@@ -307,6 +359,19 @@ void QWoTermWidget::resetProperty(QVariantMap mdata)
     setHistorySize(lines);
 }
 
+void QWoTermWidget::resetTitlePosition()
+{
+    QSize sz = size();
+    int width = scrollBarWidth();
+    QSize sh = m_title->sizeHint();
+    bool top = m_title->property("position").toBool();
+    if(top) {
+        m_title->setGeometry(sz.width() - sh.width() - width - 1, 0, sh.width(), sh.height());
+    }else{
+        m_title->setGeometry(sz.width() - sh.width() - width - 1, sz.height()-sh.height(), sh.width(), sh.height());
+    }
+}
+
 void QWoTermWidget::replaceWidget(QSplitter *spliter, int idx, QWidget *widget)
 {
     QWidget *current = spliter->widget(idx);
@@ -316,16 +381,13 @@ void QWoTermWidget::replaceWidget(QSplitter *spliter, int idx, QWidget *widget)
     widget->setGeometry(geom);
 }
 
-void QWoTermWidget::splitWidget(int sz, bool vertical)
+void QWoTermWidget::splitWidget(const QString& target, bool vertical)
 {
     QSplitter *splitParent = qobject_cast<QSplitter*>(parent());
     if(splitParent == nullptr) {
         return;
     }
-    QWoSshProcess *sshproc = qobject_cast<QWoSshProcess*>(m_process);
-    if(sshproc == nullptr) {
-        return;
-    }
+
     int cnt = splitParent->count();
     QSplitter *splitter = splitParent;
     if(cnt > 1) {
@@ -345,7 +407,7 @@ void QWoTermWidget::splitWidget(int sz, bool vertical)
     }
 
     splitter->setOrientation(vertical ? Qt::Vertical : Qt::Horizontal);
-    QString target = sshproc->target();
+    //QString target = sshproc->target();
     QWoSshProcess *process = new QWoSshProcess(target, splitter);
     QWoTermWidget *term = new QWoTermWidget(process, splitter);
     splitter->addWidget(term);

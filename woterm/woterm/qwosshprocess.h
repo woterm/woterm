@@ -12,6 +12,8 @@ class QLocalSocket;
 class QAction;
 class QFileDialog;
 class QThread;
+class QWoCmdSpy;
+class QEventLoop;
 
 class QWoSshProcess : public QWoProcess
 {
@@ -20,7 +22,6 @@ public:
     explicit QWoSshProcess(const QString& target, QObject *parent);
     virtual ~QWoSshProcess();
 
-    QString target() const;
     void triggerKeepAliveCheck();
 
 private slots:
@@ -28,14 +29,14 @@ private slots:
     void onClientError(QLocalSocket::LocalSocketError socketError);
     void onClientDisconnected();
     void onClientReadyRead();
-    void onZmodemSend();
-    void onZmodemRecv();
+    void onZmodemSend(bool local=true);
+    void onZmodemRecv(bool local=true);
     void onZmodemAbort();
     void onZmodemFinished(int code);
     void onZmodemReadyReadStandardOutput();
     void onZmodemReadyReadStandardError();
-    void onFileDialogFilesSelected(const QStringList& files);
     void onTermTitleChanged();
+    void onModifyThisSession();
     void onDuplicateInNewWindow();
     void onTimeout();
 
@@ -51,11 +52,16 @@ private:
     virtual void prepareContextMenu(QMenu *menu);
 
 private:
-    void zmodemSend(const QStringList& files);
-    void zmodemRecv();
-    QWoProcess *createZmodem();
-    bool isRzCommand(const QByteArray& data);
+    QProcess *createZmodem();
+    int isZmodemCommand(const QByteArray& data);
     void checkCommand(const QByteArray& data);
+
+private:
+    bool checkShellProgram(const QByteArray& name);
+    bool wait(int *why = nullptr, int ms = 30 * 60 * 1000);
+    bool waitInput();
+    int extractExitCode();
+    void sleep(int ms);
 private:
     QPointer<QLocalServer> m_server;
 
@@ -63,16 +69,16 @@ private:
     QPointer<FunArgReader> m_reader;
     QPointer<FunArgWriter> m_writer;
 
-    QPointer<QAction> m_zmodemDupl;
     QPointer<QAction> m_zmodemSend;
     QPointer<QAction> m_zmodemRecv;
     QPointer<QAction> m_zmodemAbort;
-    QPointer<QFileDialog> m_fileDialog;
 
-    QPointer<QWoProcess> m_zmodem;
+    QPointer<QProcess> m_zmodem;
     QString m_exeSend;
     QString m_exeRecv;
-    QString m_target;
+
+    QPointer<QWoCmdSpy> m_spy;
+    QPointer<QEventLoop> m_eventLoop;
 
     int m_idleCount;
     int m_idleDuration;

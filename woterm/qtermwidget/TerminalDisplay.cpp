@@ -749,6 +749,11 @@ void TerminalDisplay::setBackgroundImage(QString backgroundImage)
     }
 }
 
+int TerminalDisplay::scollBarWidth()
+{
+    return  _scrollBar->isHidden() ? 0 : _scrollBar->width();
+}
+
 void TerminalDisplay::drawBackground(QPainter& painter, const QRect& rect, const QColor& backgroundColor, bool useOpacitySetting )
 {
         // The whole widget rectangle is filled by the background color from

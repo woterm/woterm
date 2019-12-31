@@ -397,6 +397,11 @@ void QTermWidget::setHistorySize(int lines)
         m_impl->m_session->setHistoryType(HistoryTypeBuffer(lines));
 }
 
+int QTermWidget::scrollBarWidth()
+{
+    return m_impl->m_terminalDisplay->scollBarWidth();
+}
+
 void QTermWidget::setScrollBarPosition(ScrollBarPosition pos)
 {
     m_impl->m_terminalDisplay->setScrollBarPosition(pos);

@@ -5,7 +5,6 @@
 #include <QPointer>
 #include <QDir>
 
-class QWoProcess;
 class QMenu;
 class QWoShellWidgetImpl;
 class QWoEmbedCommand;

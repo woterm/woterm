@@ -15,7 +15,7 @@ class QWoHostInfoEdit : public QDialog
 
 public:
     explicit QWoHostInfoEdit(QWidget *parent = nullptr);
-    explicit QWoHostInfoEdit(int idx, QWidget *parent = nullptr);
+    explicit QWoHostInfoEdit(const QString& name, QWidget *parent = nullptr);
     ~QWoHostInfoEdit();
 
 private slots:
@@ -26,7 +26,7 @@ private slots:
 private:
     void init();
 private:
-    int m_idx;
+    QString m_name;
     Ui::QWoHostInfo *ui;
 };
 

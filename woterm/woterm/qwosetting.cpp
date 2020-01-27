@@ -45,6 +45,18 @@ QString QWoSetting::applicationDataPath()
     return userDataPath;
 }
 
+QString QWoSetting::identifyFilePath()
+{
+    static QString path = QDir::cleanPath(applicationDataPath() + "/identify");
+    QFileInfo fi(path);
+    if(!fi.exists() || !fi.isDir()) {
+        QDir dir;
+        dir.rmpath(path);
+        dir.mkpath(path);
+    }
+    return path;
+}
+
 QString QWoSetting::examplePath()
 {
     static QString path = QDir::cleanPath(QApplication::applicationDirPath()+"/../example/");

@@ -136,6 +136,42 @@ sshkey_load_file(int fd, struct sshbuf *blob)
 }
 
 
+static char woterm_rc4_key[] = {"woterm.2019"};
+static char woterm_file_flag[] = { "woterm:" };
+
+void rc4_init(unsigned char *s, unsigned char *key, unsigned long Len) //初始化函数
+{
+    int i =0, j = 0;
+    unsigned char k[256] = {0};
+    unsigned char tmp = 0;
+    for (i=0;i<256;i++) {
+        s[i] = i;
+        k[i] = key[i%Len];
+    }
+    for (i=0; i<256; i++) {
+        j=(j+s[i]+k[i])%256;
+        tmp = s[i];
+        s[i] = s[j]; //交换s[i]和s[j]
+        s[j] = tmp;
+    }
+}
+
+void rc4_crypt(unsigned char *s, unsigned char *Data, unsigned long Len) //加解密
+{
+    int i = 0, j = 0, t = 0;
+    long k = 0;
+    unsigned char tmp;
+    for(k=0;k<Len;k++) {
+        i=(i+1)%256;
+        j=(j+s[i])%256;
+        tmp = s[i];
+        s[i] = s[j]; //交换s[x]和s[y]
+        s[j] = tmp;
+        t=(s[i]+s[j])%256;
+        Data[k] ^= s[t];
+    }
+}
+
 /* XXX remove error() calls from here? */
 int
 sshkey_perm_ok(int fd, const char *filename)
@@ -161,12 +197,7 @@ sshkey_load_private_type(int type, const char *filename, const char *passphrase,
 			*perm_ok = 0;
 		return SSH_ERR_SYSTEM_ERROR;
 	}
-	if (sshkey_perm_ok(fd, filename) != 0) {
-		if (perm_ok != NULL)
-			*perm_ok = 0;
-		r = SSH_ERR_KEY_BAD_PERMISSIONS;
-		goto out;
-	}
+
 	if (perm_ok != NULL)
 		*perm_ok = 1;
 
@@ -178,23 +209,37 @@ sshkey_load_private_type(int type, const char *filename, const char *passphrase,
 	return r;
 }
 
-int
-sshkey_load_private_type_fd(int fd, int type, const char *passphrase,
-    struct sshkey **keyp, char **commentp)
+int sshkey_load_private_type_fd(int fd, int type, const char *passphrase, struct sshkey **keyp, char **commentp)
 {
 	struct sshbuf *buffer = NULL;
 	int r;
 
-	if (keyp != NULL)
-		*keyp = NULL;
+    if (keyp != NULL) {
+        *keyp = NULL;
+    }
 	if ((buffer = sshbuf_new()) == NULL) {
 		r = SSH_ERR_ALLOC_FAIL;
 		goto out;
 	}
-	if ((r = sshkey_load_file(fd, buffer)) != 0 ||
-	    (r = sshkey_parse_private_fileblob_type(buffer, type,
-	    passphrase, keyp, commentp)) != 0)
-		goto out;
+    if ((r = sshkey_load_file(fd, buffer)) != 0) {
+        goto out;
+    }
+
+    {
+        char *ptr = sshbuf_ptr(buffer);
+        int len = sizeof(woterm_file_flag) / sizeof(char) - 1;
+        if(strncmp(ptr, woterm_file_flag, len) == 0) {            
+            unsigned char s[256] = {0};            
+            sshbuf_consume(buffer, len);
+            int len = sizeof(woterm_rc4_key) / sizeof(char) - 1;
+            rc4_init(s,(unsigned char *)woterm_rc4_key, len);                                              
+            rc4_crypt(s,(unsigned char *)sshbuf_ptr(buffer), buffer->size);         
+        }
+    }
+
+    if ((r = sshkey_parse_private_fileblob_type(buffer, type, passphrase, keyp, commentp)) != 0) {
+        goto out;
+    }
 
 	/* success */
 	r = 0;
@@ -227,13 +272,28 @@ sshkey_load_private(const char *filename, const char *passphrase,
 		r = SSH_ERR_ALLOC_FAIL;
 		goto out;
 	}
-	if ((r = sshkey_load_file(fd, buffer)) != 0 ||
-	    (r = sshkey_parse_private_fileblob(buffer, passphrase, keyp,
-	    commentp)) != 0)
-		goto out;
-	if (keyp && *keyp &&
-	    (r = sshkey_set_filename(*keyp, filename)) != 0)
-		goto out;
+    if ((r = sshkey_load_file(fd, buffer)) != 0) {
+        goto out;
+    }
+
+    {
+        char *ptr = sshbuf_ptr(buffer);
+        int len = sizeof(woterm_file_flag) / sizeof(char) - 1;
+        if(strncmp(ptr, woterm_file_flag, len) == 0) {            
+            unsigned char s[256] = {0};            
+            sshbuf_consume(buffer, len);
+            int len = sizeof(woterm_rc4_key) / sizeof(char) - 1;
+            rc4_init(s,(unsigned char *)woterm_rc4_key, len);                                              
+            rc4_crypt(s,(unsigned char *)sshbuf_ptr(buffer), buffer->size);         
+        }
+    }
+
+    if ((r = sshkey_parse_private_fileblob(buffer, passphrase, keyp, commentp)) != 0) {
+        goto out;
+    }
+    if (keyp && *keyp && (r = sshkey_set_filename(*keyp, filename)) != 0) {
+        goto out;
+    }
 	r = 0;
  out:
 	close(fd);

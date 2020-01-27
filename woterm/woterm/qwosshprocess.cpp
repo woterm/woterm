@@ -58,6 +58,7 @@ QWoSshProcess::QWoSshProcess(const QString& target, QObject *parent)
     QStringList env = environment();
     env << "TERM=xterm-256color";
     env << "TERM_MSG_IPC_NAME="+fullName;
+    env << "WOTERM_DATA_PATH=" + QWoSetting::identifyFilePath();
     setEnvironment(env);
 
     QObject::connect(m_server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));

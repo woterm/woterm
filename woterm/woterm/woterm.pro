@@ -51,7 +51,11 @@ SOURCES += main.cpp \
     qworesult.cpp \
     qwolistview.cpp \
     qwotreeview.cpp \
-    qwocommandlineinput.cpp
+    qwocommandlineinput.cpp \
+    qwoidentifydialog.cpp \
+    qworenamedialog.cpp \
+    qwoidentifypublickeydialog.cpp \
+    qhttpclient.cpp
 
 HEADERS += \
     vte.h \
@@ -96,7 +100,11 @@ HEADERS += \
     qworesult.h \
     qwolistview.h \
     qwotreeview.h \
-    qwocommandlineinput.h
+    qwocommandlineinput.h \
+    qwoidentifydialog.h \
+    qworenamedialog.h \
+    qwoidentifypublickeydialog.h \
+    qhttpclient.h
 
 
 FORMS += \
@@ -111,6 +119,9 @@ FORMS += \
     qwopasswordinput.ui \
     qwoaboutdialog.ui \
     qwoscriptselector.ui \
-    qwocommandlineinput.ui
+    qwocommandlineinput.ui \
+    qwoidentifydialog.ui \
+    qworenamedialog.ui \
+    qwoidentifypublickeydialog.ui
 
 RESOURCES += qwoterm.qrc

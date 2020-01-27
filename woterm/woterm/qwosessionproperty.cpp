@@ -3,6 +3,7 @@
 #include "qwohostsimplelist.h"
 #include "qtermwidget.h"
 #include "qwohostlistmodel.h"
+#include "qwoidentifydialog.h"
 
 #include "qwosetting.h"
 #include "qwoutils.h"
@@ -134,10 +135,13 @@ void QWoSessionProperty::onTreeItemClicked(const QModelIndex &idx)
 
 void QWoSessionProperty::onIdentifyBrowserClicked()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"));
+    QString fileName = QWoIdentifyDialog::open(this);
+    if(fileName.isEmpty()) {
+        return;
+    }
     qDebug() << "fileName" << fileName;
     fileName = QDir::toNativeSeparators(fileName);
-    ui->identify->setCurrentText(fileName);
+    ui->identify->setText(fileName);
 }
 
 void QWoSessionProperty::onJumpBrowserClicked()
@@ -200,19 +204,12 @@ void QWoSessionProperty::initDefault()
     QVariantMap mdata = QWoUtils::qBase64ToVariant(val).toMap();
     resetProerty(mdata);
     ui->userName->setEditText("");
-    ui->identify->setEditText("");
+    ui->identify->setText("");
     ui->jump->setEditText("");
 }
 
 void QWoSessionProperty::initHistory()
 {
-    {
-        QVariant v = QWoSetting::value("history/identifyList");
-        QStringList el = v.toStringList();
-        QStringListModel *model = new QStringListModel(this);
-        model->setStringList(el);
-        ui->identify->setModel(model);
-    }
     {
         QVariant v = QWoSetting::value("history/userNameList");
         QStringList el = v.toStringList();
@@ -244,7 +241,13 @@ void QWoSessionProperty::initCustom()
     ui->memo->setPlainText(hi.memo);
     ui->userName->setEditText(hi.user);
     ui->password->setText(hi.password);
-    ui->identify->setEditText(hi.identityFile);
+    if(!hi.identityFile.isEmpty()){
+        QString identify = hi.identityFile;
+        if(identify.startsWith("woterm:")) {
+            identify = identify.remove(0, 7);
+        }
+        ui->identify->setText(QWoUtils::pathToName(identify));
+    }
     if(!hi.password.isEmpty()) {
         ui->authType->setCurrentText("Password");
     }else{
@@ -301,9 +304,18 @@ bool QWoSessionProperty::saveConfig()
         hi.port = ui->port->text().toInt();
         hi.memo = ui->memo->toPlainText();
         hi.user = ui->userName->currentText();
-        hi.password = ui->password->text();
-        hi.identityFile = QDir::toNativeSeparators(ui->identify->currentText());
-        hi.proxyJump = ui->jump->currentText();
+        hi.proxyJump = ui->jump->currentText();        
+        if(ui->authType->currentText() == "Password") {
+            hi.password = ui->password->text();
+        }else{
+            hi.identityFile = QWoUtils::nameToPath(ui->identify->text());
+            QString identify = QWoSetting::identifyFilePath() + "/" + hi.identityFile;
+            if(!QFileInfo::exists(identify)) {
+                QMessageBox::warning(this, tr("Info"), tr("failed to find the identify file"));
+                return false;
+            }
+            hi.identityFile.insert(0, "woterm:");
+        }
 
         if(hi.name.isEmpty()) {
             QMessageBox::warning(this, tr("Info"), tr("The name can't be empty"));
@@ -366,7 +378,7 @@ void QWoSessionProperty::savePropertyToAll()
 
 void QWoSessionProperty::saveHistory()
 {
-    QString identityFile = QDir::toNativeSeparators(ui->identify->currentText());
+    QString identityFile = QDir::toNativeSeparators(ui->identify->text());
     if(!identityFile.isEmpty())
     {
         QVariant v = QWoSetting::value("history/identifyList");
@@ -426,6 +438,7 @@ void QWoSessionProperty::init()
     Qt::WindowFlags flags = windowFlags();
     setWindowFlags(flags &~Qt::WindowContextHelpButtonHint);
     ui->setupUi(this);
+    ui->identify->setReadOnly(true);
 
     if(m_type == DefaultProperty) {
         setWindowTitle(QString(tr("Session[Default]")));

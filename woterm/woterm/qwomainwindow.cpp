@@ -9,7 +9,10 @@
 #include "qwosessionproperty.h"
 #include "qwosessionmanage.h"
 #include "qwoaboutdialog.h"
+#include "qwoidentifydialog.h"
 #include "version.h"
+#include "qhttpclient.h"
+#include "qwoutils.h"
 
 #include <QApplication>
 #include <QMessageBox>
@@ -22,6 +25,8 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QDockWidget>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 Q_GLOBAL_STATIC(QWoMainWindow, mainWindow)
 
@@ -161,7 +166,33 @@ void QWoMainWindow::onProcessStartCheck()
 
 void QWoMainWindow::onAppStart()
 {
-    QMetaObject::invokeMethod(this, "onOpenTerm", Qt::QueuedConnection);
+    QHttpClient::get("http://www.woterm.com/version/latest", this, SLOT(onVersionCheck(int,const QByteArray&)));
+}
+
+void QWoMainWindow::onVersionCheck(int code, const QByteArray &body)
+{
+    qDebug() << code << body;
+    if(code < 0) {
+        QMessageBox::warning(this, tr("version check"), QString(tr("Failed For %1")).arg(body.data()));
+    }else{
+        if(code == 200) {
+            QJsonDocument json = QJsonDocument::fromJson(body);
+            if(json.isObject()) {
+                QJsonObject obj = json.object();
+                QJsonValue ver = obj.value("version");
+                QString version = ver.toString();
+                qDebug() << "version" << version;
+                int ver_latest = QWoUtils::versionToLong(version);
+                int ver_now = QWoUtils::versionToLong(WOTERM_VERSION);
+                if(ver_latest > ver_now) {
+                    int ok = QMessageBox::information(this, tr("version check"), QString(tr("Found New Version: %1,Try To Download?")).arg(version), QMessageBox::Ok|QMessageBox::Cancel);
+                    if(ok == QMessageBox::Ok) {
+                        QDesktopServices::openUrl(QUrl("http://www.woterm.com"));
+                    }
+                }
+            }
+        }
+    }
 }
 
 void QWoMainWindow::onShouldAppExit()
@@ -249,6 +280,11 @@ void QWoMainWindow::onActionScriptRunTriggered()
     m_shower->openScriptRuner("script");
 }
 
+void QWoMainWindow::onActionSshKeyManageTriggered()
+{
+    QWoIdentifyDialog::open(this);
+}
+
 void QWoMainWindow::initMenuBar()
 {
     QObject::connect(ui->actionDisconect, SIGNAL(triggered()), this, SLOT(onActionDisconnectTriggered()));
@@ -270,30 +306,19 @@ void QWoMainWindow::initMenuBar()
 void QWoMainWindow::initToolBar()
 {
     QToolBar *tool = ui->mainToolBar;
-    QAction *newTerm = tool->addAction(QIcon(":/qwoterm/resource/skin/add2.png"), tr("New"));
-    QObject::connect(newTerm, SIGNAL(triggered()), this, SLOT(onNewTerm()));
-
-    QAction *openTerm = tool->addAction(QIcon(":/qwoterm/resource/skin/nodes.png"), tr("Manage"));
-    QObject::connect(openTerm, SIGNAL(triggered()), this, SLOT(onOpenTerm()));
-
-    QAction *lay = tool->addAction(QIcon(":/qwoterm/resource/skin/layout.png"), tr("List"));
-    QObject::connect(lay, SIGNAL(triggered()), this, SLOT(onLayout()));
-
+    tool->addAction(QIcon(":/qwoterm/resource/skin/add2.png"), tr("New"), this, SLOT(onNewTerm()));
+    tool->addAction(QIcon(":/qwoterm/resource/skin/nodes.png"), tr("Manage"), this, SLOT(onOpenTerm()));
+    tool->addAction(QIcon(":/qwoterm/resource/skin/layout.png"), tr("List"), this, SLOT(onLayout()));
 
 //    QAction *import = tool->addAction(QIcon(":/qwoterm/resource/skin/import.png"), tr("Import"));
 //    QObject::connect(import, SIGNAL(triggered()), this, SLOT(onActionImportTriggered()));
 
 //    QAction *myexport = tool->addAction(QIcon(":/qwoterm/resource/skin/export.png"), tr("Export"));
 //    QObject::connect(myexport, SIGNAL(triggered()), this, SLOT(onActionExportTriggered()));
-
-    QAction *cfgdef = tool->addAction(QIcon(":/qwoterm/resource/skin/palette.png"), tr("Setting"));
-    QObject::connect(cfgdef, SIGNAL(triggered()), this, SLOT(onActionConfigDefaultTriggered()));
-
-    QAction *script = tool->addAction(QIcon(":/qwoterm/resource/skin/js.png"), tr("Script"));
-    QObject::connect(script, SIGNAL(triggered()), this, SLOT(onActionScriptRunTriggered()));
-
-    QAction *about = tool->addAction(QIcon(":/qwoterm/resource/skin/about.png"), tr("About"));
-    QObject::connect(about, SIGNAL(triggered()), this, SLOT(onActionAboutTriggered()));
+    tool->addAction(QIcon(":/qwoterm/resource/skin/palette.png"), tr("Setting"), this, SLOT(onActionConfigDefaultTriggered()));
+    tool->addAction(QIcon(":/qwoterm/resource/skin/js.png"), tr("Script"), this, SLOT(onActionScriptRunTriggered()));
+    //tool->addAction(QIcon(":/qwoterm/resource/skin/js.png"), tr("Keys"), this, SLOT(onActionSshKeyManageTriggered()));
+    tool->addAction(QIcon(":/qwoterm/resource/skin/about.png"), tr("About"), this, SLOT(onActionAboutTriggered()));
 }
 
 void QWoMainWindow::initStatusBar()

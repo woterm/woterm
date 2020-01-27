@@ -1423,11 +1423,12 @@ sshkey_format_text(const struct sshkey *key, struct sshbuf *b)
 	int r = SSH_ERR_INTERNAL_ERROR;
 	char *uu = NULL;
 
-	if ((r = sshkey_to_base64(key, &uu)) != 0)
-		goto out;
-	if ((r = sshbuf_putf(b, "%s %s",
-	    sshkey_ssh_name(key), uu)) != 0)
-		goto out;
+    if ((r = sshkey_to_base64(key, &uu)) != 0) {
+        goto out;
+    }
+    if ((r = sshbuf_putf(b, "--publickey--:[ssh-name:%s] [public-key:%s]", sshkey_ssh_name(key), uu)) != 0) {
+        goto out;
+    }
 	r = 0;
  out:
 	free(uu);
@@ -1440,10 +1441,12 @@ sshkey_write(const struct sshkey *key, FILE *f)
 	struct sshbuf *b = NULL;
 	int r = SSH_ERR_INTERNAL_ERROR;
 
-	if ((b = sshbuf_new()) == NULL)
-		return SSH_ERR_ALLOC_FAIL;
-	if ((r = sshkey_format_text(key, b)) != 0)
-		goto out;
+    if ((b = sshbuf_new()) == NULL) {
+        return SSH_ERR_ALLOC_FAIL;
+    }
+    if ((r = sshkey_format_text(key, b)) != 0) {
+        goto out;
+    }
 	if (fwrite(sshbuf_ptr(b), sshbuf_len(b), 1, f) != 1) {
 		if (feof(f))
 			errno = EPIPE;
@@ -4092,14 +4095,12 @@ sshkey_parse_private_fileblob_type(struct sshbuf *blob, int type,
 		return sshkey_parse_private2(blob, type, passphrase,
 		    keyp, commentp);
 	case KEY_UNSPEC:
-		r = sshkey_parse_private2(blob, type, passphrase, keyp,
-		    commentp);
+		r = sshkey_parse_private2(blob, type, passphrase, keyp, commentp);
 		/* Do not fallback to PEM parser if only passphrase is wrong. */
 		if (r == 0 || r == SSH_ERR_KEY_WRONG_PASSPHRASE)
 			return r;
 #ifdef WITH_OPENSSL
-		return sshkey_parse_private_pem_fileblob(blob, type,
-		    passphrase, keyp);
+		return sshkey_parse_private_pem_fileblob(blob, type, passphrase, keyp);
 #else
 		return SSH_ERR_INVALID_FORMAT;
 #endif /* WITH_OPENSSL */

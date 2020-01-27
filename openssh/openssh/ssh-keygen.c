@@ -798,6 +798,24 @@ do_print_public(struct passwd *pw)
 }
 
 static void
+do_woterm_print_public(struct passwd *pw)
+{
+    struct sshkey *prv;
+    struct stat st;
+    int r;
+
+    if (stat(identity_file, &st) < 0) {
+        fatal("%s: %s", identity_file, strerror(errno));
+    }
+    prv = load_identity(identity_file);
+    if ((r = sshkey_write(prv, stdout)) != 0) {
+        error("sshkey_write failed: %s", ssh_err(r));
+    }
+    sshkey_free(prv);
+    fprintf(stdout, "\n");
+}
+
+static void
 do_download(struct passwd *pw)
 {
 #ifdef ENABLE_PKCS11
@@ -869,7 +887,7 @@ fingerprint_one_key(const struct sshkey *public, const char *comment)
 	ra = sshkey_fingerprint(public, fingerprint_hash, SSH_FP_RANDOMART);
 	if (fp == NULL || ra == NULL)
 		fatal("%s: sshkey_fingerprint failed", __func__);
-	mprintf("%u %s %s (%s)\n", sshkey_size(public), fp,
+	mprintf("--fingerprint--:[keysize:%u] [fingure:%s] [comment:%s] [type:%s]\n", sshkey_size(public), fp,
 	    comment ? comment : "no comment", sshkey_type(public));
 	if (log_level >= SYSLOG_LEVEL_VERBOSE)
 		printf("%s\n", ra);
@@ -885,8 +903,9 @@ fingerprint_private(const char *path)
 	struct sshkey *public = NULL;
 	int r;
 
-	if (stat(identity_file, &st) < 0)
-		fatal("%s: %s", path, strerror(errno));
+    if (stat(identity_file, &st) < 0) {
+        fatal("%s: %s", path, strerror(errno));
+    }
 	if ((r = sshkey_load_public(path, &public, &comment)) != 0) {
 		debug("load public \"%s\": %s", path, ssh_err(r));
 		if ((r = sshkey_load_private(path, NULL,
@@ -899,6 +918,100 @@ fingerprint_private(const char *path)
 	fingerprint_one_key(public, comment);
 	sshkey_free(public);
 	free(comment);
+}
+
+static int 
+do_woterm_fingerprint(struct passwd *pw)
+{
+    FILE *f;
+    struct sshkey *public = NULL;
+    char *comment = NULL, *cp, *ep, *line = NULL;
+    size_t linesize = 0;
+    int i, invalid = 1;
+    const char *path;
+    u_long lnum = 0;
+
+    path = identity_file;
+
+    if (strcmp(identity_file, "-") == 0) {
+        f = stdin;
+        path = "(stdin)";
+    } else if ((f = fopen(path, "r")) == NULL) {
+        return 0;
+    }
+
+    while (getline(&line, &linesize, f) != -1) {
+        lnum++;
+        cp = line;
+        cp[strcspn(cp, "\n")] = '\0';
+        /* Trim leading space and comments */
+        cp = line + strspn(line, " \t");
+        if (*cp == '#' || *cp == '\0') {
+            continue;
+        }
+
+        /*
+        * Input may be plain keys, private keys, authorized_keys
+        * or known_hosts.
+        */
+
+        /*
+        * Try private keys first. Assume a key is private if
+        * "SSH PRIVATE KEY" appears on the first line and we're
+        * not reading from stdin (XXX support private keys on stdin).
+        */
+        if (lnum == 1 && strcmp(identity_file, "-") != 0 &&
+            strstr(cp, "PRIVATE KEY") != NULL) {
+            free(line);
+            fclose(f);
+            fingerprint_private(path);
+            return 0;
+        }
+
+        /*
+        * If it's not a private key, then this must be prepared to
+        * accept a public key prefixed with a hostname or options.
+        * Try a bare key first, otherwise skip the leading stuff.
+        */
+        if ((public = try_read_key(&cp)) == NULL) {
+            i = strtol(cp, &ep, 10);
+            if (i == 0 || ep == NULL ||
+                (*ep != ' ' && *ep != '\t')) {
+                int quoted = 0;
+
+                comment = cp;
+                for (; *cp && (quoted || (*cp != ' ' &&
+                    *cp != '\t')); cp++) {
+                    if (*cp == '\\' && cp[1] == '"')
+                        cp++;	/* Skip both */
+                    else if (*cp == '"')
+                        quoted = !quoted;
+                }
+                if (!*cp)
+                    continue;
+                *cp++ = '\0';
+            }
+        }
+        /* Retry after parsing leading hostname/key options */
+        if (public == NULL && (public = try_read_key(&cp)) == NULL) {
+            debug("%s:%lu: not a public key", path, lnum);
+            continue;
+        }
+
+        /* Find trailing comment, if any */
+        for (; *cp == ' ' || *cp == '\t'; cp++)
+            ;
+        if (*cp != '\0' && *cp != '#')
+            comment = cp;
+
+        fingerprint_one_key(public, comment);
+        sshkey_free(public);
+        invalid = 0; /* One good key in the file is sufficient */
+    }
+    fclose(f);
+    free(line);
+
+    return 0;
 }
 
 static void
@@ -1662,6 +1775,7 @@ load_pkcs11_key(char *path)
 #else
 	fatal("no pkcs11 support");
 #endif /* ENABLE_PKCS11 */
+    return NULL;
 }
 
 /* Signer for sshkey_certify_custom that uses the agent */
@@ -2426,6 +2540,19 @@ usage(void)
 	exit(1);
 }
 
+void do_woterm_action(struct passwd *pw) {
+    char *action = getenv("WOTERM_KEYGEN_ACTION");
+    if(action == NULL) {
+        return;
+    }
+
+    //MessageBoxA(0, 0, 0, 0);
+    if(strcmp(action, "get") == 0) {        
+        do_woterm_print_public(pw);
+        do_woterm_fingerprint(pw);
+        exit(0);
+    }
+}
 /*
  * Main program for key management.
  */
@@ -2470,10 +2597,12 @@ main(int argc, char **argv)
 
 	/* we need this for the home * directory.  */
 	pw = getpwuid(getuid());
-	if (!pw)
-		fatal("No user exists for uid %lu", (u_long)getuid());
-	if (gethostname(hostname, sizeof(hostname)) < 0)
-		fatal("gethostname: %s", strerror(errno));
+    if (!pw) {
+        fatal("No user exists for uid %lu", (u_long)getuid());
+    }
+    if (gethostname(hostname, sizeof(hostname)) < 0) {
+        fatal("gethostname: %s", strerror(errno));
+    }
 
 	/* Remaining characters: Ydw */
 	while ((opt = getopt(argc, argv, "ABHLQUXceghiklopquvxy"
@@ -2694,6 +2823,8 @@ main(int argc, char **argv)
 	argv += optind;
 	argc -= optind;
 
+    do_woterm_action(pw);
+
 	if (ca_key_path != NULL) {
 		if (argc < 1 && !gen_krl) {
 			error("Too few arguments.");
@@ -2707,6 +2838,7 @@ main(int argc, char **argv)
 		error("Can only have one of -p and -c.");
 		usage();
 	}
+    
 	if (print_fingerprint && (delete_host || hash_hosts)) {
 		error("Cannot use -l with -H or -R.");
 		usage();
@@ -2724,6 +2856,7 @@ main(int argc, char **argv)
 			fatal("Must specify key id (-I) when certifying");
 		do_ca_sign(pw, argc, argv);
 	}
+
 	if (show_cert)
 		do_show_cert(pw);
 	if (delete_host || hash_hosts || find_host)
@@ -2742,8 +2875,9 @@ main(int argc, char **argv)
 	if (convert_from)
 		do_convert_from(pw);
 #endif
-	if (print_public)
-		do_print_public(pw);
+    if (print_public) {
+        do_print_public(pw);
+    }
 	if (rr_hostname != NULL) {
 		unsigned int n = 0;
 
@@ -2851,16 +2985,16 @@ main(int argc, char **argv)
 		}
 	}
 	/* If the file already exists, ask the user to confirm. */
-	if (stat(identity_file, &st) >= 0) {
-		char yesno[3];
-		printf("%s already exists.\n", identity_file);
-		printf("Overwrite (y/n)? ");
-		fflush(stdout);
-		if (fgets(yesno, sizeof(yesno), stdin) == NULL)
-			exit(1);
-		if (yesno[0] != 'y' && yesno[0] != 'Y')
-			exit(1);
-	}
+	//if (stat(identity_file, &st) >= 0) {
+	//	char yesno[3];
+	//	printf("%s already exists.\n", identity_file);
+	//	printf("Overwrite (y/n)? ");
+	//	fflush(stdout);
+	//	if (fgets(yesno, sizeof(yesno), stdin) == NULL)
+	//		exit(1);
+	//	if (yesno[0] != 'y' && yesno[0] != 'Y')
+	//		exit(1);
+	//}
 	/* Ask for a passphrase (twice). */
 	if (identity_passphrase)
 		passphrase1 = xstrdup(identity_passphrase);

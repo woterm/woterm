@@ -5,6 +5,7 @@
 #include <QProcess>
 #include <QMessageBox>
 #include <QList>
+#include <QByteArray>
 
 #include "qwoglobal.h"
 #include "qwomainwindow.h"

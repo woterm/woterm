@@ -9,6 +9,7 @@ public:
     static QVariant value(const QString& key);
 
     static QString applicationDataPath();
+    static QString identifyFilePath();
     static QString examplePath();
     static QString privateDataPath();
     static QString privateJsCorePath();

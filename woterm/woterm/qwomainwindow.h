@@ -35,6 +35,7 @@ private slots:
     void onSessionBatchToConnect(const QStringList& targets,bool samepage);
     void onProcessStartCheck();
     void onAppStart();
+    void onVersionCheck(int code, const QByteArray& body);
     void onShouldAppExit();
 
 private slots:
@@ -53,6 +54,7 @@ private slots:
     void onActionFindTriggered();
     void onActionAboutTriggered();
     void onActionScriptRunTriggered();
+    void onActionSshKeyManageTriggered();
 
 private:
     void initMenuBar();

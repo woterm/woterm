@@ -328,6 +328,8 @@ static void pubkey_prepare(Authctxt *);
 static void pubkey_cleanup(Authctxt *);
 static void pubkey_reset(Authctxt *);
 static struct sshkey *load_identity_file(Identity *);
+static struct sshkey *load_woterm_identity_file(Identity *);
+static struct sshkey *load_other_identity_file(Identity *);
 
 static Authmethod *authmethod_get(char *authlist);
 static Authmethod *authmethod_lookup(const char *name);
@@ -1412,8 +1414,101 @@ send_pubkey_test(struct ssh *ssh, Authctxt *authctxt, Identity *id)
 	return sent;
 }
 
-static struct sshkey *
-load_identity_file(Identity *id)
+static struct sshkey *load_identity_file(Identity *id)
+{
+    if(strncmp(id->filename, "woterm:", 7) == 0) {
+        return load_woterm_identity_file(id);
+    }    
+    return load_other_identity_file(id);
+}
+
+char* mytrim(char *a){
+    char *p1, *p2;
+    p1 = a;
+    p2 = a + strlen(a) - 1;
+    while (p1 <= p2 && *p1 == ' '){
+        p1++;
+    }
+    while (p2 >= p1 && *p2 == ' '){
+        p2--;
+    }
+    *(++p2) = '\0';
+    return p1;
+}
+
+static struct sshkey *load_woterm_identity_file(Identity *id)
+{
+    struct sshkey *private = NULL;
+    struct stat st;
+    char filename[256] = { 0 };
+    char prompt[300], *passphrase, *comment;
+    int r, perm_ok = 0, quit = 0, i = 0;
+    char *name = getenv("WOTERM_DATA_PATH");
+    if(name) {
+        name = mytrim(name);
+#ifdef WIN32
+        sprintf(filename, "%s\\%s", name, id->filename + 7);
+#else
+        sprintf(filename, "%s/%s", name, id->filename + 7);
+#endif
+    }
+
+    if (stat(filename, &st) < 0) {
+        return NULL;
+    }
+
+    snprintf(prompt, sizeof prompt, "Enter passphrase for key '%.100s': ", id->filename);
+    for (i = 0; i <= options.number_of_password_prompts; i++) {
+        if ( i == 0 ) {
+            passphrase = "";
+        } else {
+            passphrase = read_passphrase(prompt, 0);
+            if (*passphrase == '\0') {
+                debug2("no passphrase given, try next key");
+                free(passphrase);
+                break;
+            }
+        }
+        r = sshkey_load_private_type(KEY_UNSPEC, filename, passphrase, &private, &comment, &perm_ok);
+        switch (r) {
+        case 0:
+            break;
+        case SSH_ERR_KEY_WRONG_PASSPHRASE:
+            if (options.batch_mode) {
+                quit = 1;
+                break;
+            }
+            if (i != 0) {
+                debug2("bad passphrase given, try again...");
+            }
+            break;
+        case SSH_ERR_SYSTEM_ERROR:
+            if (errno == ENOENT) {
+                debug2("Load key \"%s\": %s", id->filename, ssh_err(r));
+                quit = 1;
+                break;
+            }
+            /* FALLTHROUGH */
+        default:
+            error("Load key \"%s\": %s", id->filename, ssh_err(r));
+            quit = 1;
+            break;
+        }
+        if (!quit && private != NULL && id->agent_fd == -1 && !(id->key && id->isprivate)) {
+            maybe_add_key_to_agent(id->filename, private, comment, passphrase);
+        }
+        if (i > 0) {
+            freezero(passphrase, strlen(passphrase));
+        }
+        free(comment);
+        if (private != NULL || quit) {
+            break;
+        }
+    }
+    return private;
+}
+
+static struct sshkey *load_other_identity_file(Identity *id)
 {
 	struct sshkey *private = NULL;
 	char prompt[300], *passphrase, *comment;
@@ -1630,6 +1725,9 @@ pubkey_prepare(Authctxt *authctxt)
 		TAILQ_REMOVE(&files, id, next);
 		TAILQ_INSERT_TAIL(preferred, id, next);
 	}
+
+#if 0
+    // delete by wingo.he
 	/* finally, filter by PubkeyAcceptedKeyTypes */
 	TAILQ_FOREACH_SAFE(id, preferred, next, id2) {
 		if (id->key != NULL && !key_type_allowed_by_config(id->key)) {
@@ -1649,6 +1747,7 @@ pubkey_prepare(Authctxt *authctxt)
 		debug("Will attempt key: %s", ident);
 		free(ident);
 	}
+#endif
 	debug2("%s: done", __func__);
 }
 
@@ -1723,16 +1822,16 @@ userauth_pubkey(Authctxt *authctxt)
 			if (id->key != NULL) {
 				if (try_identity(id)) {
 					id->isprivate = 1;
-					sent = sign_and_send_pubkey(ssh,
-					    authctxt, id);
+					sent = sign_and_send_pubkey(ssh, authctxt, id);
 				}
 				sshkey_free(id->key);
 				id->key = NULL;
 				id->isprivate = 0;
 			}
 		}
-		if (sent)
-			return (sent);
+        if (sent) {
+            return (sent);
+        }
 	}
 	return (0);
 }

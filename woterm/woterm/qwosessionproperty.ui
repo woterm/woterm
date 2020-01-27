@@ -370,14 +370,8 @@
                 </widget>
                </item>
                <item>
-                <widget class="QComboBox" name="identify">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="editable">
+                <widget class="QLineEdit" name="identify">
+                 <property name="readOnly">
                   <bool>true</bool>
                  </property>
                 </widget>

@@ -51,15 +51,17 @@ private slots:
     void onActionLogTriggered();
     void onActionExitTriggered();
     void onActionConfigDefaultTriggered();
+    void onActionSettingTriggered();
     void onActionFindTriggered();
     void onActionAboutTriggered();
     void onActionScriptRunTriggered();
     void onActionSshKeyManageTriggered();
-
+    void restoreLastState();
 private:
     void initMenuBar();
     void initToolBar();
     void initStatusBar();
+
 private:
     Ui::QWoMainWindow *ui;
     QPointer<QTabBar> m_tab;

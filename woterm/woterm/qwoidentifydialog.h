@@ -48,8 +48,6 @@ private:
     QMap<QString, QString> identifyFileGet(const QString &file);
     bool identifyFileSet(const QString& file, const QString& name);
     bool identifyInfomation(const QString&file, QWoIdentifyDialog::IdentifyInfo *pinfo);
-    QByteArray toWotermIdentify(const QByteArray& data);
-    QByteArray toStandardIdentify(const QByteArray& data);
     QString runProcess(const QStringList& args, const QStringList& envs=QStringList());
     bool wait(int ms = 30 * 60 * 1000, int *why = nullptr);
 private:

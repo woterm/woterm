@@ -16,7 +16,7 @@ public:
 
     bool save();
     bool refresh();
-    bool exportTo(const QString& path);
+    bool exportToFile(const QString& path);
 
     void remove(const QString& name);
     bool modify(const HostInfo& hi);
@@ -33,6 +33,7 @@ public:
 
 private:
     QHash<QString, HostInfo> parse(const QByteArray& buf);
+    QByteArray toStream();
 private:
     QString m_conf;
     QHash<QString, HostInfo> m_hosts;

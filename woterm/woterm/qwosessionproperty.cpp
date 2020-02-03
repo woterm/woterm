@@ -120,10 +120,8 @@ void QWoSessionProperty::onFontValueChanged(int i)
 void QWoSessionProperty::onTreeItemClicked(const QModelIndex &idx)
 {
     QString name = idx.data().toString();
-    if(name == tr("Connect")) {
+    if(name == tr("Connection")) {
         ui->stacked->setCurrentWidget(ui->connectWidget);
-    }else if(name == tr("Authentication")){
-        ui->stacked->setCurrentWidget(ui->authenticationWidget);
     }else if(name == tr("Terminal")){
         ui->stacked->setCurrentWidget(ui->terminalWidget);
     }else if(name == tr("Appearance")){
@@ -251,7 +249,7 @@ void QWoSessionProperty::initCustom()
     if(!hi.password.isEmpty()) {
         ui->authType->setCurrentText("Password");
     }else{
-        ui->authType->setCurrentText("IdentifyFile");
+        ui->authType->setCurrentText("Identify");
     }
     ui->jump->setEditText(hi.proxyJump);
 }
@@ -475,11 +473,8 @@ void QWoSessionProperty::init()
         ui->connect->hide();
         ui->connectWidget->hide();
     }else{
-        QStandardItem *connect = new QStandardItem(tr("Connect"));
+        QStandardItem *connect = new QStandardItem(tr("Connection"));
         m_model.appendRow(connect);
-        QStandardItem *auth = new QStandardItem(tr("Authentication"));
-        m_model.appendRow(auth);
-        //ui->hostName->setReadOnly(!m_name.isEmpty());
     }
 
     QStandardItem *terminal = new QStandardItem(tr("Terminal"));

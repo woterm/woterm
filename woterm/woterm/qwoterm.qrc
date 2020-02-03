@@ -37,5 +37,8 @@
         <file>resource/skin/vaddsplit.png</file>
         <file>resource/skin/layout.png</file>
         <file>resource/skin/layout2.png</file>
+        <file>resource/skin/setting2.png</file>
+        <file>resource/skin/setting3.png</file>
+        <file>resource/skin/setting.png</file>
     </qresource>
 </RCC>

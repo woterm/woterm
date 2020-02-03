@@ -92,7 +92,7 @@ void QWoIdentifyDialog::onButtonImportClicked()
     QFile f(fileName);
     f.open(QFile::ReadOnly);
     QByteArray buf = f.readAll();
-    QByteArray data = toWotermIdentify(buf);
+    QByteArray data = QWoUtils::fromWotermStream(buf);
     f.close();
     QString name = info.name;
     for(int i = 0; i < 10; i++) {
@@ -102,7 +102,6 @@ void QWoIdentifyDialog::onButtonImportClicked()
             info.name = name;
             QFile dst(dstFile);
             if(dst.open(QFile::WriteOnly)) {
-                dst.write("woterm:");
                 dst.write(data);
             }
             dst.close();
@@ -139,7 +138,7 @@ void QWoIdentifyDialog::onButtonExportClicked()
         return;
     }
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"));
-    QByteArray buf = toStandardIdentify(file.readAll());
+    QByteArray buf = QWoUtils::fromWotermStream(file.readAll());
     file.close();
     QFile prv(fileName);
     if(prv.open(QFile::WriteOnly)) {
@@ -373,15 +372,13 @@ bool QWoIdentifyDialog::identifyInfomation(const QString &file, IdentifyInfo *pi
     }
     QFileInfo fi(file);
     QStringList cols;
-    QString name = info.value("fingureprint.comment");
-    if(name.isEmpty()) {
-        QString tmp = QDir::cleanPath(file);
-        QString path = QDir::cleanPath(QWoSetting::identifyFilePath());
-        if(tmp.startsWith(path)) {
-            name = pathToName(fi.baseName());
-        }else{
-            name = fi.baseName();
-        }
+    QString name = info.value("fingureprint.comment");    
+    QString tmp = QDir::cleanPath(file);
+    QString path = QDir::cleanPath(QWoSetting::identifyFilePath());
+    if(tmp.startsWith(path)) {
+        name = pathToName(fi.baseName());
+    }if(name.isEmpty()){
+        name = fi.baseName();
     }
     QString pubkey = info.value("publickey.public-key");
     QString type = info.value("publickey.ssh-name");
@@ -391,27 +388,6 @@ bool QWoIdentifyDialog::identifyInfomation(const QString &file, IdentifyInfo *pi
     QString hash = QCryptographicHash::hash(pubkey.toUtf8(), QCryptographicHash::Md5).toHex();
     pinfo->fingureprint = hash;
     return true;
-}
-
-QByteArray QWoIdentifyDialog::toWotermIdentify(const QByteArray &data)
-{
-    QByteArray key("woterm.2019");
-    if(data.startsWith("woterm:")) {
-        QByteArray buf(data);
-        return buf.remove(0,  7);
-    }
-    return QWoUtils::rc4(data, key);
-}
-
-QByteArray QWoIdentifyDialog::toStandardIdentify(const QByteArray &data)
-{
-    QByteArray key("woterm.2019");
-    if(data.startsWith("woterm:")) {
-        QByteArray buf(data);
-        buf = buf.remove(0,  7);
-        return QWoUtils::rc4(buf, key);
-    }
-    return data;
 }
 
 QString QWoIdentifyDialog::runProcess(const QStringList &args, const QStringList &envs)

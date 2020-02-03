@@ -142,3 +142,25 @@ int QWoUtils::versionToLong(const QString &ver)
     int ver_minor2 = parts.at(2).toInt();
     return ver_major + ver_minor + ver_minor2;
 }
+
+QByteArray QWoUtils::toWotermStream(const QByteArray &data)
+{
+    QByteArray key("woterm.2019");
+    if(data.startsWith("woterm:")) {
+        return data;
+    }
+    QByteArray buf = rc4(data, key);
+    buf.insert(0, "woterm:");
+    return buf;
+}
+
+QByteArray QWoUtils::fromWotermStream(const QByteArray &data)
+{
+    QByteArray key("woterm.2019");
+    if(data.startsWith("woterm:")) {
+        QByteArray buf(data);
+        buf = buf.remove(0,  7);
+        return rc4(buf, key);
+    }
+    return data;
+}

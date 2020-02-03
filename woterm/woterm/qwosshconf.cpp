@@ -1,5 +1,6 @@
 #include "qwosshconf.h"
 #include "qwosetting.h"
+#include "qwoutils.h"
 
 #include <QFile>
 #include <QDebug>
@@ -170,32 +171,11 @@ QHash<QString, HostInfo> QWoSshConf::parse(const QByteArray& buf)
     return hosts;
 }
 
-bool QWoSshConf::save()
+QByteArray QWoSshConf::toStream()
 {
-    return exportTo(m_conf);
-}
-
-bool QWoSshConf::refresh()
-{
-    QFile file(m_conf);
-    if(!file.exists()) {
-        return false;
-    }
-    if(!file.open(QFile::ReadOnly)) {
-      QMessageBox::warning(nullptr, tr("LoadSshConfig"), tr("Failed to open file:")+m_conf, QMessageBox::Ok);
-      return false;
-    }
-    QByteArray buf = file.readAll();
-    m_hosts = parse(buf);
-    return true;
-}
-
-bool QWoSshConf::exportTo(const QString &path)
-{
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)){
-        return false;
-    }
+    QByteArray buf;
+    QBuffer file(&buf);
+    file.open(QIODevice::WriteOnly);
     QList<QString> hosts = m_hosts.keys();
     std::sort(hosts.begin(), hosts.end());
     for(int i = 0; i < hosts.length(); i++) {
@@ -245,6 +225,41 @@ bool QWoSshConf::exportTo(const QString &path)
             file.write(line.toUtf8());
         }
     }
+    return buf;
+}
+
+bool QWoSshConf::save()
+{
+    return exportToFile(m_conf);
+}
+
+bool QWoSshConf::refresh()
+{
+    QFile file(m_conf);
+    if(!file.exists()) {
+        return false;
+    }
+    if(!file.open(QFile::ReadOnly)) {
+      QMessageBox::warning(nullptr, tr("LoadSshConfig"), tr("Failed to open file:")+m_conf, QMessageBox::Ok);
+      return false;
+    }
+    QByteArray buf = file.readAll();
+    buf = QWoUtils::fromWotermStream(buf);
+    //qDebug() << buf;
+    m_hosts = parse(buf);
+    return true;
+}
+
+bool QWoSshConf::exportToFile(const QString &path)
+{
+    QByteArray buf = toStream();
+    //qDebug() << buf;
+    buf = QWoUtils::toWotermStream(buf);
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)){
+        return false;
+    }
+    file.write(buf);
     return true;
 }
 

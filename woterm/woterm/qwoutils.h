@@ -16,4 +16,6 @@ public:
     static QString nameToPath(const QString &name);
     static QString pathToName(const QString &path);
     static int versionToLong(const QString& ver);
+    static QByteArray toWotermStream(const QByteArray &data);
+    static QByteArray fromWotermStream(const QByteArray& data);
 };

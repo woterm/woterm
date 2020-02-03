@@ -1769,44 +1769,118 @@ read_config_file(const char *filename, struct passwd *pw, const char *host,
 	    options, flags, &active, 0);
 }
 
+static char woterm_rc4_key2[] = {"woterm.2019"};
+static char woterm_file_flag2[] = { "woterm:" };
+extern void rc4_init(unsigned char *s, unsigned char *key, unsigned long Len); //初始化函数
+extern void rc4_crypt(unsigned char *s, unsigned char *Data, unsigned long Len); //加解密
+
 #define READCONF_MAX_DEPTH	16
-static int
-read_config_file_depth(const char *filename, struct passwd *pw,
-    const char *host, const char *original_host, Options *options,
-    int flags, int *activep, int depth)
+static int read_config_file_depth(const char *filename, struct passwd *pw, const char *host, 
+    const char *original_host, Options *options, int flags, int *activep, int depth)
 {
 	FILE *f;
-	char *line = NULL;
+	char *line = NULL, *buffer = NULL;
 	size_t linesize = 0;
-	int linenum;
+	int linenum, left, fsize, nread;
 	int bad_options = 0;
 
-	if (depth < 0 || depth > READCONF_MAX_DEPTH)
-		fatal("Too many recursive configuration includes");
 
-	if ((f = fopen(filename, "r")) == NULL)
-		return 0;
+    if (depth < 0 || depth > READCONF_MAX_DEPTH) {
+        fatal("Too many recursive configuration includes");
+    }
 
+    if ((f = fopen(filename, "rb")) == NULL) {
+        return 0;
+    }
+    if(fseek(f, 0, SEEK_END) != 0) {
+        return 0;
+    }
+    fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    buffer = malloc(fsize+1);
+    if(buffer == NULL) {
+        return 0;
+    }
+    if (fread(buffer, 1, fsize, f) != fsize) {
+        return 0;
+    }
+    buffer[fsize] = '\0';
+    fclose(f);
+    line = buffer;
+    linenum = 0;
+    left = fsize;
+    {
+        int len = sizeof(woterm_file_flag2) / sizeof(char) - 1;
+        if(strncmp(buffer, woterm_file_flag2, len) == 0) {            
+            unsigned char s[256] = {0};
+            line = buffer + len;
+            left = fsize - len;
+            int len = sizeof(woterm_rc4_key2) / sizeof(char) - 1;
+            rc4_init(s,(unsigned char *)woterm_rc4_key2, len);                                              
+            rc4_crypt(s,(unsigned char *)line, left);         
+        }
+    }
+    /*
+    * Mark that we are now processing the options.  This flag is turned
+    * on/off by Host specifications.
+    */
+    while(left > 0) {
+        for(linesize = 0; linesize < left; linesize++) {
+            if(line[linesize] == '\n') {
+                line[linesize] = '\0';
+                break;
+            }
+        }
+        linenum++;
+        if (process_config_line_depth(options, pw, host, original_host, line, filename, linenum, activep, flags, depth) != 0) {
+            bad_options++;
+        }
+        line += linesize+1;
+        left -= linesize+1;
+    }
+    free(buffer);
 	debug("Reading configuration data %.200s", filename);
-
-	/*
-	 * Mark that we are now processing the options.  This flag is turned
-	 * on/off by Host specifications.
-	 */
-	linenum = 0;
-	while (getline(&line, &linesize, f) != -1) {
-		/* Update line number counter. */
-		linenum++;
-		if (process_config_line_depth(options, pw, host, original_host,
-		    line, filename, linenum, activep, flags, depth) != 0)
-			bad_options++;
-	}
-	free(line);
-	fclose(f);
-	if (bad_options > 0)
-		fatal("%s: terminating, %d bad configuration options",
-		    filename, bad_options);
+    if (bad_options > 0) {
+        fatal("%s: terminating, %d bad configuration options", filename, bad_options);
+    }
 	return 1;
+}
+
+static int read_config_file_depth_original(const char *filename, struct passwd *pw, const char *host, 
+    const char *original_host, Options *options, int flags, int *activep, int depth)
+{
+    FILE *f;
+    char *line = NULL;
+    size_t linesize = 0;
+    int linenum;
+    int bad_options = 0;
+
+    if (depth < 0 || depth > READCONF_MAX_DEPTH)
+        fatal("Too many recursive configuration includes");
+
+    if ((f = fopen(filename, "r")) == NULL)
+        return 0;
+
+    debug("Reading configuration data %.200s", filename);
+
+    /*
+    * Mark that we are now processing the options.  This flag is turned
+    * on/off by Host specifications.
+    */
+    linenum = 0;
+    while (getline(&line, &linesize, f) != -1) {
+        /* Update line number counter. */
+        linenum++;
+        if (process_config_line_depth(options, pw, host, original_host,
+            line, filename, linenum, activep, flags, depth) != 0)
+            bad_options++;
+    }
+    free(line);
+    fclose(f);
+    if (bad_options > 0)
+        fatal("%s: terminating, %d bad configuration options",
+            filename, bad_options);
+    return 1;
 }
 
 /* Returns 1 if a string option is unset or set to "none" or 0 otherwise. */

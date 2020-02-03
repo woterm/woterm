@@ -13,6 +13,7 @@
 #include "version.h"
 #include "qhttpclient.h"
 #include "qwoutils.h"
+#include "qwosettingdialog.h"
 
 #include <QApplication>
 #include <QMessageBox>
@@ -50,11 +51,9 @@ QWoMainWindow::QWoMainWindow(QWidget *parent)
     //actionsMenu->addAction("About Qt", this, SLOT(aboutQt()));
 
     m_dock = new QDockWidget("SessionManager", this);
-    addDockWidget(Qt::LeftDockWidgetArea, m_dock);
     m_dock->setFloating(false);
     m_dock->setFeatures(QDockWidget::DockWidgetMovable|QDockWidget::DockWidgetClosable);
     m_dock->setAllowedAreas(Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea);
-    m_dock->setVisible(false);
 
     m_sessions = new QWoSessionList(m_dock);
     m_dock->setWidget(m_sessions);
@@ -85,6 +84,8 @@ QWoMainWindow::QWoMainWindow(QWidget *parent)
 
     QTimer::singleShot(1000, this, SLOT(onProcessStartCheck()));
 
+    restoreLastState();
+    //QMetaObject::invokeMethod(this, "restoreLastState", Qt::QueuedConnection);
 }
 
 QWoMainWindow::~QWoMainWindow()
@@ -99,6 +100,11 @@ QWoMainWindow *QWoMainWindow::instance()
 
 void QWoMainWindow::closeEvent(QCloseEvent *event)
 {
+    bool isRight = m_dock->geometry().x() > 100;
+    bool isVisible = m_dock->isVisible();
+    QWoSetting::setValue("mainwindow/dockRight", isRight);
+    QWoSetting::setValue("mainwindow/dockShow", isVisible);
+
     QMessageBox::StandardButton btn = QMessageBox::warning(this, "exit", "Exit Or Not?", QMessageBox::Ok|QMessageBox::No);
     if(btn == QMessageBox::No) {
         event->setAccepted(false);
@@ -264,6 +270,12 @@ void QWoMainWindow::onActionConfigDefaultTriggered()
     dlg.exec();
 }
 
+void QWoMainWindow::onActionSettingTriggered()
+{
+    QWoSettingDialog dlg(this);
+    dlg.exec();
+}
+
 void QWoMainWindow::onActionFindTriggered()
 {
     m_shower->openFindDialog();
@@ -315,9 +327,10 @@ void QWoMainWindow::initToolBar()
 
 //    QAction *myexport = tool->addAction(QIcon(":/qwoterm/resource/skin/export.png"), tr("Export"));
 //    QObject::connect(myexport, SIGNAL(triggered()), this, SLOT(onActionExportTriggered()));
-    tool->addAction(QIcon(":/qwoterm/resource/skin/palette.png"), tr("Setting"), this, SLOT(onActionConfigDefaultTriggered()));
+    tool->addAction(QIcon(":/qwoterm/resource/skin/palette.png"), tr("Style"), this, SLOT(onActionConfigDefaultTriggered()));
     tool->addAction(QIcon(":/qwoterm/resource/skin/js.png"), tr("Script"), this, SLOT(onActionScriptRunTriggered()));
     //tool->addAction(QIcon(":/qwoterm/resource/skin/js.png"), tr("Keys"), this, SLOT(onActionSshKeyManageTriggered()));
+    //tool->addAction(QIcon(":/qwoterm/resource/skin/setting.png"), tr("Setting"), this, SLOT(onActionSettingTriggered()));
     tool->addAction(QIcon(":/qwoterm/resource/skin/about.png"), tr("About"), this, SLOT(onActionAboutTriggered()));
 }
 
@@ -325,4 +338,12 @@ void QWoMainWindow::initStatusBar()
 {
     //QStatusBar *bar = ui->statusBar;
     setStatusBar(nullptr);
+}
+
+void QWoMainWindow::restoreLastState()
+{
+    bool isRight = QWoSetting::value("mainwindow/dockRight").toBool();
+    bool isShow = QWoSetting::value("mainwindow/dockShow").toBool();
+    addDockWidget(isRight ? Qt::RightDockWidgetArea : Qt::LeftDockWidgetArea, m_dock);
+    m_dock->setVisible(isShow);
 }

@@ -182,7 +182,9 @@ void QWoIdentifyDialog::onButtonSelectClicked()
         QMessageBox::information(this, tr("info"), tr("no selection"));
         return;
     }
-    m_result = idx.data().toString();
+    QAbstractItemModel *model = ui->identify->model();
+    QModelIndex idx2 = model->index(idx.row(), 0);
+    m_result = idx2.data().toString();
     close();
 }
 

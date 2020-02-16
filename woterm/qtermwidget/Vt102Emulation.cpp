@@ -509,6 +509,8 @@ void Vt102Emulation::processWindowAttributeChange()
 
   _pendingTitleUpdates[attributeToChange] = newValue;
   _titleUpdateTimer->start(20);
+
+  emit windowAttributeArrived(attributeToChange, newValue);
 }
 
 void Vt102Emulation::updateTitle()

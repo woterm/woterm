@@ -49,7 +49,6 @@ private slots:
     void onFinished(int code);
     void onInputArrived();
     void onApplicationKeypad(bool state);
-
     void onZmodemReadyReadStandardOutput();
     void onZmodemReadyReadStandardError();
     void onZmodemFinished(int code);

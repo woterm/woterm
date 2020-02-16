@@ -311,6 +311,8 @@ signals:
    */
   void lockPtyRequest(bool suspend);
 
+  void windowAttributeArrived(int type, const QString& val);
+
   /**
    * Requests that the pty used by the terminal process
    * be set to UTF 8 mode.

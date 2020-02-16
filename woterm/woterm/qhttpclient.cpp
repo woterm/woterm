@@ -7,40 +7,40 @@
 #include <QMetaEnum>
 #include <QMetaObject>
 
-Q_GLOBAL_STATIC(QNetworkAccessManager, getNetworkAccessManager)
 
 QHttpClient::QHttpClient(QObject *parent):
     QObject (parent)
 {
+    m_networkAccessManger = new QNetworkAccessManager(this);
+}
 
+QHttpClient::~QHttpClient()
+{
+    delete m_networkAccessManger;
 }
 
 QNetworkReply *QHttpClient::get(const QNetworkRequest &request)
 {
-    return getNetworkAccessManager()->get(request);
+    return m_networkAccessManger->get(request);
 }
 
 QNetworkReply *QHttpClient::post(const QNetworkRequest &request, const QByteArray &data)
 {
-    return getNetworkAccessManager()->post(request, data);
+    return m_networkAccessManger->post(request, data);
 }
 
-QNetworkReply *QHttpClient::get(const QString &url, QObject* receiver, const char *method)
+void QHttpClient::get(const QString &url, QObject* receiver, const char *method)
 {
     QNetworkReply *reply = get(QNetworkRequest(url));
-    QHttpClient *client = new QHttpClient();
-    QObject::connect(client, SIGNAL(result(int,const QByteArray&)), receiver, method);
-    QObject::connect(reply, SIGNAL(finished()), client, SLOT(onFinished()));
-    return reply;
+    QObject::connect(this, SIGNAL(result(int,const QByteArray&)), receiver, method);
+    QObject::connect(reply, SIGNAL(finished()), this, SLOT(onFinished()));
 }
 
-QNetworkReply *QHttpClient::post(const QString &url, const QByteArray &data, QObject *receiver, const char *method)
+void QHttpClient::post(const QString &url, const QByteArray &data, QObject *receiver, const char *method)
 {
     QNetworkReply *reply = post(QNetworkRequest(url), data);
-    QHttpClient *client = new QHttpClient();
-    QObject::connect(client, SIGNAL(result(int,const QByteArray&)), receiver, method);
-    QObject::connect(reply, SIGNAL(finished()), client, SLOT(onFinish()));
-    return reply;
+    QObject::connect(this, SIGNAL(result(int,const QByteArray&)), receiver, method);
+    QObject::connect(reply, SIGNAL(finished()), this, SLOT(onFinish()));
 }
 
 void QHttpClient::onFinished()

@@ -56,7 +56,9 @@ SOURCES += main.cpp \
     qworenamedialog.cpp \
     qwoidentifypublickeydialog.cpp \
     qhttpclient.cpp \
-    qwosettingdialog.cpp
+    qwosettingdialog.cpp \
+    qwocommandhistorymodel.cpp \
+    qwocommandhistoryform.cpp
 
 HEADERS += \
     vte.h \
@@ -106,7 +108,9 @@ HEADERS += \
     qworenamedialog.h \
     qwoidentifypublickeydialog.h \
     qhttpclient.h \
-    qwosettingdialog.h
+    qwosettingdialog.h \
+    qwocommandhistorymodel.h \
+    qwocommandhistoryform.h
 
 
 FORMS += \
@@ -125,6 +129,7 @@ FORMS += \
     qwoidentifydialog.ui \
     qworenamedialog.ui \
     qwoidentifypublickeydialog.ui \
-    qwosettingdialog.ui
+    qwosettingdialog.ui \
+    qwocommandhistoryform.ui
 
 RESOURCES += qwoterm.qrc

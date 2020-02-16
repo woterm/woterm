@@ -9,16 +9,23 @@ class QHttpClient : public QObject
 {
     Q_OBJECT
 public:
-    static QNetworkReply *get(const QNetworkRequest& request);
-    static QNetworkReply *post(const QNetworkRequest& request, const QByteArray& data);
-    static QNetworkReply* get(const QString& url, QObject* receiver, const char* method);
-    static QNetworkReply* post(const QString& url, const QByteArray& data, QObject* receiver, const char* method);
-private:
     explicit QHttpClient(QObject *parent = nullptr);
+    ~QHttpClient();
+
+    void get(const QString& url, QObject* receiver, const char* method);
+    void post(const QString& url, const QByteArray& data, QObject* receiver, const char* method);
+
 signals:
     void result(int code, const QByteArray& body);
 private slots:
     void onFinished();
+
+private:
+    QNetworkReply *get(const QNetworkRequest& request);
+    QNetworkReply *post(const QNetworkRequest& request, const QByteArray& data);
+
+private:
+    QPointer<QNetworkAccessManager> m_networkAccessManger;
 };
 
 #endif // QHTTPCLIENT_H

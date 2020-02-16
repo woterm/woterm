@@ -47,7 +47,17 @@ QString QWoSetting::applicationDataPath()
 
 QString QWoSetting::identifyFilePath()
 {
-    static QString path = QDir::cleanPath(applicationDataPath() + "/identify");
+    return specialFilePath("identify");
+}
+
+QString QWoSetting::historyFilePath()
+{
+    return specialFilePath("history");
+}
+
+QString QWoSetting::specialFilePath(const QString &name)
+{
+    QString path = QDir::cleanPath(applicationDataPath() + "/" + name);
     QFileInfo fi(path);
     if(!fi.exists() || !fi.isDir()) {
         QDir dir;

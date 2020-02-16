@@ -14,6 +14,8 @@
 #include "qhttpclient.h"
 #include "qwoutils.h"
 #include "qwosettingdialog.h"
+#include "qhttpclient.h"
+#include "qwocommandhistoryform.h"
 
 #include <QApplication>
 #include <QMessageBox>
@@ -37,8 +39,7 @@ QWoMainWindow::QWoMainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     setMinimumSize(QSize(1024, 700));
-    QByteArray geom = QWoSetting::value("woterm/geometry").toByteArray();
-    restoreGeometry(geom);
+
     setContentsMargins(3,3,3,3);
     setWindowTitle(QString("WoTerm %1").arg(WOTERM_VERSION));
 
@@ -50,13 +51,26 @@ QWoMainWindow::QWoMainWindow(QWidget *parent)
     //actionsMenu->addAction("Find...", this, SLOT(toggleShowSearchBar()), QKeySequence(Qt::CTRL +  Qt::Key_F));
     //actionsMenu->addAction("About Qt", this, SLOT(aboutQt()));
 
-    m_dock = new QDockWidget("SessionManager", this);
-    m_dock->setFloating(false);
-    m_dock->setFeatures(QDockWidget::DockWidgetMovable|QDockWidget::DockWidgetClosable);
-    m_dock->setAllowedAreas(Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea);
+    m_sessionDock = new QDockWidget("Session Manager", this);
+    m_sessionDock->setObjectName("Session Manager");
+    m_sessionDock->setFloating(true);
+    m_sessionDock->setFeatures(QDockWidget::DockWidgetMovable|QDockWidget::DockWidgetClosable);
+    m_sessionDock->setAllowedAreas(Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea);    
+    addDockWidget(Qt::LeftDockWidgetArea, m_sessionDock);
+    m_sessions = new QWoSessionList(m_sessionDock);
+    m_sessionDock->setWidget(m_sessions);
+    m_sessionDock->setVisible(false);
 
-    m_sessions = new QWoSessionList(m_dock);
-    m_dock->setWidget(m_sessions);
+    m_historyDock = new QDockWidget("Command History", this);
+    m_historyDock->setObjectName("Command History");
+    m_historyDock->setFloating(true);
+    m_historyDock->setFeatures(QDockWidget::DockWidgetMovable|QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetClosable);
+    m_historyDock->setAllowedAreas(Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea);
+    addDockWidget(Qt::LeftDockWidgetArea, m_historyDock);
+    m_historyForm = new QWoCommandHistoryForm(m_historyDock);
+    m_historyDock->setWidget(m_historyForm);
+    m_historyDock->setFloating(false);
+    m_historyDock->setVisible(false);
 
     QWoWidget *central = new QWoWidget(this);
     setCentralWidget(central);
@@ -85,7 +99,6 @@ QWoMainWindow::QWoMainWindow(QWidget *parent)
     QTimer::singleShot(1000, this, SLOT(onProcessStartCheck()));
 
     restoreLastState();
-    //QMetaObject::invokeMethod(this, "restoreLastState", Qt::QueuedConnection);
 }
 
 QWoMainWindow::~QWoMainWindow()
@@ -95,23 +108,29 @@ QWoMainWindow::~QWoMainWindow()
 
 QWoMainWindow *QWoMainWindow::instance()
 {
-     return mainWindow;
+    return mainWindow;
+}
+
+QWoCommandHistoryForm *QWoMainWindow::historyForm()
+{
+    return instance()->m_historyForm;
+}
+
+void QWoMainWindow::setHistoryFormVisible(bool on)
+{
+    m_historyDock->setVisible(on);
 }
 
 void QWoMainWindow::closeEvent(QCloseEvent *event)
 {
-    bool isRight = m_dock->geometry().x() > 100;
-    bool isVisible = m_dock->isVisible();
-    QWoSetting::setValue("mainwindow/dockRight", isRight);
-    QWoSetting::setValue("mainwindow/dockShow", isVisible);
+    saveLastState();
 
     QMessageBox::StandardButton btn = QMessageBox::warning(this, "exit", "Exit Or Not?", QMessageBox::Ok|QMessageBox::No);
     if(btn == QMessageBox::No) {
         event->setAccepted(false);
         return ;
     }
-    QByteArray geom = saveGeometry();
-    QWoSetting::setValue("woterm/geometry", geom);
+
     QMainWindow::closeEvent(event);
 }
 
@@ -133,7 +152,7 @@ void QWoMainWindow::onOpenTerm()
 
 void QWoMainWindow::onLayout()
 {
-    m_dock->setVisible(!m_dock->isVisible());
+    m_sessionDock->setVisible(!m_sessionDock->isVisible());
 }
 
 void QWoMainWindow::onEditConfig()
@@ -172,7 +191,8 @@ void QWoMainWindow::onProcessStartCheck()
 
 void QWoMainWindow::onAppStart()
 {
-    QHttpClient::get("http://www.woterm.com/version/latest", this, SLOT(onVersionCheck(int,const QByteArray&)));
+    m_httpClient = new QHttpClient(this);
+    m_httpClient->get("http://www.woterm.com/version/latest", this, SLOT(onVersionCheck(int,const QByteArray&)));
 }
 
 void QWoMainWindow::onVersionCheck(int code, const QByteArray &body)
@@ -199,6 +219,7 @@ void QWoMainWindow::onVersionCheck(int code, const QByteArray &body)
             }
         }
     }
+    m_httpClient->deleteLater();
 }
 
 void QWoMainWindow::onShouldAppExit()
@@ -342,8 +363,25 @@ void QWoMainWindow::initStatusBar()
 
 void QWoMainWindow::restoreLastState()
 {
-    bool isRight = QWoSetting::value("mainwindow/dockRight").toBool();
-    bool isShow = QWoSetting::value("mainwindow/dockShow").toBool();
-    addDockWidget(isRight ? Qt::RightDockWidgetArea : Qt::LeftDockWidgetArea, m_dock);
-    m_dock->setVisible(isShow);
+    QByteArray geom = QWoSetting::value("mainwindow/geometry").toByteArray();
+    if(!geom.isEmpty()) {
+        restoreGeometry(geom);
+    }
+
+    QByteArray buf = QWoSetting::value("mainwindow/lastLayout").toByteArray();
+    if(!buf.isEmpty()) {
+        restoreState(buf);
+    }
+
+    m_historyDock->setFloating(false);
+    m_sessionDock->setFloating(false);
+    m_historyDock->setVisible(false);
+}
+
+void QWoMainWindow::saveLastState()
+{
+    QByteArray state = saveState();
+    QWoSetting::setValue("mainwindow/lastLayout", state);
+    QByteArray geom = saveGeometry();
+    QWoSetting::setValue("mainwindow/geometry", geom);
 }

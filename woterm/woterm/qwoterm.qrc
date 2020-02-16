@@ -40,5 +40,6 @@
         <file>resource/skin/setting2.png</file>
         <file>resource/skin/setting3.png</file>
         <file>resource/skin/setting.png</file>
+        <file>resource/skin/history.png</file>
     </qresource>
 </RCC>

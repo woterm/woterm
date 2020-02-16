@@ -10,6 +10,7 @@ public:
 
     static QString applicationDataPath();
     static QString identifyFilePath();
+    static QString historyFilePath();
     static QString examplePath();
     static QString privateDataPath();
     static QString privateJsCorePath();
@@ -22,4 +23,6 @@ public:
     static QString sshServerListPath();
     static QString lastJsLoadPath();
     static void setLastJsLoadPath(const QString& path);
+private:
+    static QString specialFilePath(const QString& name);
 };

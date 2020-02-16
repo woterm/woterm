@@ -6,6 +6,8 @@
 #include "qwosessionproperty.h"
 #include "qwomainwindow.h"
 #include "qwocmdspy.h"
+#include "qwocommandhistorymodel.h"
+#include "qwocommandhistoryform.h"
 
 #include <qtermwidget.h>
 
@@ -22,7 +24,13 @@
 #include <QMessageBox>
 #include <QMetaObject>
 #include <QTime>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QEventLoop>
+#include <QFile>
+#include <QBuffer>
+#include <QSortFilterProxyModel>
+
 
 
 QWoSshProcess::QWoSshProcess(const QString& target, QObject *parent)
@@ -66,10 +74,21 @@ QWoSshProcess::QWoSshProcess(const QString& target, QObject *parent)
     QTimer *timer = new QTimer(this);
     QObject::connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
     timer->start(1000);
+
+    HostInfo hi = QWoSshConf::instance()->find(target);
+    m_model = get(hi.host);
+    m_model->setMaxColumnCount(2);
+    m_proxyModel = new QSortFilterProxyModel(this);
+    m_proxyModel->setSourceModel(m_model.data());
 }
 
 QWoSshProcess::~QWoSshProcess()
 {
+    if(m_model) {
+        if(m_model->descreaseReferCount() == 0) {
+            m_model->deleteLater();
+        }
+    }
     if(m_process->isOpen()) {
         m_process->kill();
         m_process->waitForFinished();
@@ -125,22 +144,24 @@ void QWoSshProcess::checkCommand(const QByteArray &out)
 {
     bool isApp = m_term->isAppMode();
     if(!isApp) {
+        if(m_stateInput.state == Init) {
+            m_stateInput.state = Ready;
+            m_stateInput.title = m_term->lineTextAtCursor(1).simplified();
+        }
         if(out.lastIndexOf('\r') >= 0 || out.lastIndexOf('\n') >= 0) {
-            QString command = m_term->lineTextAtCursor(1);
-            command = command.simplified();
-            if(command.length() < 200) {
-                int idx = command.lastIndexOf('$');
-                if(idx >= 0) {
-                    command = command.mid(idx+1).trimmed();
+            QString line = m_term->lineTextAtCursor(1).simplified();
+            if(m_stateInput.state == Ready && line.startsWith(m_stateInput.title)) {
+                QString title = m_term->title();
+                QString cmd = line.remove(0, m_stateInput.title.length());
+                m_stateInput.command = cmd.simplified();
+                m_stateInput.state = Running;
+                qDebug() << "command:" << m_stateInput.command;
+                int idx = title.indexOf(':');
+                QString path;
+                if(idx > 0) {
+                    path = title.remove(0, idx+1);
                 }
-                idx = command.lastIndexOf(QChar::Space);
-                if(idx < 0) {
-                    QString cmd = command;
-                    if(cmd == "rz") {
-                        qDebug() << "command" << command;
-                        QMetaObject::invokeMethod(this, "onZmodemSend", Qt::QueuedConnection);
-                    }
-                }
+                pushToHistory(m_stateInput.command, path);
             }
         }
     }
@@ -225,6 +246,35 @@ void QWoSshProcess::sleep(int ms)
     timer.setInterval(ms);
     timer.start();
     loop.exec();
+}
+
+
+void QWoSshProcess::pushToHistory(const QString &command, const QString &path)
+{
+    if(m_model->add(command, path)) {
+        m_historyLeftSaveCount = 10;
+    }
+}
+
+void QWoSshProcess::saveHistory()
+{
+    m_model->save();
+}
+
+QWoCommandHistoryModel* QWoSshProcess::get(const QString &name)
+{
+    static QMap<QString, QPointer<QWoCommandHistoryModel>> models;
+    if(models.contains(name)) {
+        QWoCommandHistoryModel* model = models.value(name);
+        if(model) {
+            model->inscreaseReferCount();
+            return model;
+        }
+    }
+    QWoCommandHistoryModel* model = new QWoCommandHistoryModel(name);
+    models.insert(name, model);
+    model->inscreaseReferCount();
+    return model;
 }
 
 bool QWoSshProcess::wait(int *why, int ms)
@@ -400,6 +450,15 @@ void QWoSshProcess::onTermTitleChanged()
     qDebug() << "prompt changed:" << m_prompt;
 }
 
+void QWoSshProcess::onTermGetFocus()
+{
+    m_historyForm->resetModel(m_proxyModel);
+}
+
+void QWoSshProcess::onTermLostFocus()
+{
+}
+
 void QWoSshProcess::onModifyThisSession()
 {
     if(!QWoSshConf::instance()->exists(m_sessionName)){
@@ -413,6 +472,13 @@ void QWoSshProcess::onModifyThisSession()
         HostInfo hi = QWoSshConf::instance()->find(m_sessionName);
         QWoEvent ev(QWoEvent::PropertyChanged);
         QCoreApplication::sendEvent(m_term, &ev);
+    }
+}
+
+void QWoSshProcess::onSessionCommandHistory()
+{
+    if(m_historyForm) {
+        QWoMainWindow::instance()->setHistoryFormVisible(true);
     }
 }
 
@@ -432,6 +498,41 @@ void QWoSshProcess::onTimeout()
             m_idleCount = 0;
             write(" \b");
         }
+    }
+    if(m_historyLeftSaveCount > 0) {
+        m_historyLeftSaveCount--;
+        if(m_historyLeftSaveCount <= 0) {
+            saveHistory();
+        }
+    }
+}
+
+void QWoSshProcess::onWindowAttributeArrived(int type, const QString &val)
+{
+    if(type >= 0 && type < 3) {
+        //set icon or title.
+        m_stateInput.state = Init;
+    }
+}
+
+void QWoSshProcess::onCommandReplay(const HistoryCommand &hc)
+{
+    if(m_zmodem) {
+        return;
+    }
+    QAbstractItemModel *model = m_historyForm->model();
+    QAbstractItemModel *proxy = m_proxyModel;
+    if(proxy == model) {
+        QString cmd;
+        if(!hc.path.isEmpty()) {
+            cmd.append("cd " + hc.path);
+        }
+        if(!cmd.isEmpty()) {
+            cmd.append("&&");
+        }
+        cmd.append(hc.cmd);
+        cmd.append('\n');
+        write(cmd.toUtf8());
     }
 }
 
@@ -499,7 +600,7 @@ bool QWoSshProcess::eventFilter(QObject *obj, QEvent *ev)
     QEvent::Type t = ev->type();
     if (t == QEvent::Resize) {
         QMetaObject::invokeMethod(this, "updateTermSize",Qt::QueuedConnection);
-    }else if(t == QWoEvent::EventType) {
+    } else if(t == QWoEvent::EventType) {
         QWoEvent *we = (QWoEvent*)ev;
         QWoEvent::WoEventType t = we->eventType();
         m_idleCount = 0;
@@ -546,8 +647,8 @@ bool QWoSshProcess::eventFilter(QObject *obj, QEvent *ev)
         }
 
         if(t == QWoEvent::BeforeWriteStdOut) {
-            //QByteArray out = we->data().toByteArray();
-            //checkCommand(out);
+            QByteArray out = we->data().toByteArray();
+            checkCommand(out);
             return true;
         }
 
@@ -561,9 +662,16 @@ bool QWoSshProcess::eventFilter(QObject *obj, QEvent *ev)
 
 void QWoSshProcess::setTermWidget(QTermWidget *widget)
 {
+    m_historyForm = QWoMainWindow::historyForm();
+    QObject::connect(m_historyForm, SIGNAL(replay(const HistoryCommand&)), this, SLOT(onCommandReplay(const HistoryCommand&)));
+
     QWoProcess::setTermWidget(widget);
     widget->installEventFilter(this);
+    QObject::connect(m_term, SIGNAL(termGetFocus()), this, SLOT(onTermGetFocus()));
+    QObject::connect(m_term, SIGNAL(termLostFocus()), this, SLOT(onTermLostFocus()));
     QObject::connect(m_term, SIGNAL(titleChanged()), this, SLOT(onTermTitleChanged()));
+    QObject::connect(m_term, SIGNAL(windowAttributeArrived(int,const QString&)), this, SLOT(onWindowAttributeArrived(int,const QString&)));
+
 }
 
 void QWoSshProcess::prepareContextMenu(QMenu *menu)
@@ -571,7 +679,9 @@ void QWoSshProcess::prepareContextMenu(QMenu *menu)
     if(m_zmodemSend == nullptr) {
         menu->addAction(QIcon(":/qwoterm/resource/skin/find.png"), tr("Find..."), m_term, SLOT(toggleShowSearchBar()), QKeySequence(Qt::CTRL +  Qt::Key_F));
         menu->addAction(QIcon(":/qwoterm/resource/skin/palette.png"), tr("Edit"), this, SLOT(onModifyThisSession()));
+        menu->addAction(QIcon(":/qwoterm/resource/skin/history.png"), tr("History"), this, SLOT(onSessionCommandHistory()));
         menu->addAction(tr("Duplicate In New Window"), this, SLOT(onDuplicateInNewWindow()));
+
         m_zmodemSend = menu->addAction(QIcon(":/qwoterm/resource/skin/upload.png"), tr("Zmodem Upload"), this, SLOT(onZmodemSend()));
         m_zmodemRecv = menu->addAction(QIcon(":/qwoterm/resource/skin/download.png"), tr("Zmodem Receive"), this, SLOT(onZmodemRecv()));
         m_zmodemAbort = menu->addAction(tr("Zmoddem Abort"), this, SLOT(onZmodemAbort()), QKeySequence(Qt::CTRL +  Qt::Key_C));

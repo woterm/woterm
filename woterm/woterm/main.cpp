@@ -16,8 +16,32 @@
 #include "qwotermstyle.h"
 #include "qwoutils.h"
 
+void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+  QByteArray localMsg = msg.toLocal8Bit();
+  switch (type) {
+  case QtDebugMsg:
+      qDebug() << "Debug: %s (%s:%u, %s)\n" << localMsg.constData() << context.file << context.line << context.function;
+      break;
+  case QtInfoMsg:
+      qDebug() << "Info: %s (%s:%u, %s)\n" << localMsg.constData() << context.file << context.line << context.function;
+      break;
+  case QtWarningMsg:
+      qDebug() << "Warning: %s (%s:%u, %s)\n" << localMsg.constData() << context.file << context.line << context.function;
+      break;
+  case QtCriticalMsg:
+      qDebug() << "Critical: %s (%s:%u, %s)\n" << localMsg.constData() << context.file << context.line << context.function;
+      break;
+  case QtFatalMsg:
+      qDebug() << "Fatal: %s (%s:%u, %s)\n" << localMsg.constData() << context.file << context.line << context.function;
+      break;
+  }
+}
+
 int main(int argc, char *argv[])
 {
+    //qInstallMessageHandler(myMessageOutput);
+
 #ifdef Q_OS_WIN
     static QApplication app(argc, argv);
 #else

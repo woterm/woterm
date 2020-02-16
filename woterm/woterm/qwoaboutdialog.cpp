@@ -28,6 +28,8 @@ QWoAboutDialog::QWoAboutDialog(QWidget *parent) :
     ui->desc->setTextFormat(Qt::RichText);
 
     QObject::connect(ui->btnVersion, SIGNAL(clicked()), this, SLOT(onVersionCheck()));
+
+
 }
 
 QWoAboutDialog::~QWoAboutDialog()
@@ -37,7 +39,8 @@ QWoAboutDialog::~QWoAboutDialog()
 
 void QWoAboutDialog::onVersionCheck()
 {
-    QHttpClient::get("http://www.woterm.com/version/latest", this, SLOT(onResult(int,const QByteArray&)));
+    m_httpClient = new QHttpClient(this);
+    m_httpClient->get("http://www.woterm.com/version/latest", this, SLOT(onResult(int,const QByteArray&)));
 }
 
 void QWoAboutDialog::onResult(int code, const QByteArray &body)
@@ -66,4 +69,5 @@ void QWoAboutDialog::onResult(int code, const QByteArray &body)
             }
         }
     }
+    m_httpClient->deleteLater();
 }

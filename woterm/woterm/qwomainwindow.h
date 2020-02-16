@@ -4,6 +4,7 @@
 
 #include <QMainWindow>
 #include <QPointer>
+#include <QDockWidget>
 
 class QMenuBar;
 class QVBoxLayout;
@@ -11,6 +12,8 @@ class QTabBar;
 class QToolBar;
 class QWoShower;
 class QWoSessionList;
+class QHttpClient;
+class QWoCommandHistoryForm;
 
 namespace Ui {
 class QWoMainWindow;
@@ -24,6 +27,9 @@ public:
     explicit QWoMainWindow(QWidget *parent=nullptr);
     virtual ~QWoMainWindow();
     static QWoMainWindow *instance();
+    static QWoCommandHistoryForm *historyForm();
+    void setHistoryFormVisible(bool on);
+
 protected:
     void closeEvent(QCloseEvent *event);
 private slots:
@@ -56,16 +62,21 @@ private slots:
     void onActionAboutTriggered();
     void onActionScriptRunTriggered();
     void onActionSshKeyManageTriggered();
-    void restoreLastState();
+
 private:
     void initMenuBar();
     void initToolBar();
     void initStatusBar();
+    void restoreLastState();
+    void saveLastState();
 
 private:
     Ui::QWoMainWindow *ui;
     QPointer<QTabBar> m_tab;
     QPointer<QWoSessionList> m_sessions;
-    QPointer<QDockWidget> m_dock;
+    QPointer<QDockWidget> m_sessionDock;
+    QPointer<QWoCommandHistoryForm> m_historyForm;
+    QPointer<QDockWidget> m_historyDock;
     QPointer<QWoShower> m_shower;
+    QPointer<QHttpClient> m_httpClient;
 };

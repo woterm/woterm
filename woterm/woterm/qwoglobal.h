@@ -18,7 +18,17 @@ typedef struct{
     QString group;
 }HostInfo;
 
+struct HistoryCommand {
+    QString cmd;
+    QString path;
+
+    bool operator==(const HistoryCommand& other) {
+        return other.cmd == cmd;
+    }
+};
+
 Q_DECLARE_METATYPE(HostInfo)
+Q_DECLARE_METATYPE(HistoryCommand)
 
 #ifdef Q_OS_MACOS
 #define DEFAULT_FONT_FAMILY "Menlo"

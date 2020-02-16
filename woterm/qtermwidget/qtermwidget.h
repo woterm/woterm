@@ -220,6 +220,8 @@ signals:
 
     void urlActivated(const QUrl&, bool fromContextMenu);
 
+    void windowAttributeArrived(int type, const QString& val);
+
     void bell(const QString& message);
 
     void activity();

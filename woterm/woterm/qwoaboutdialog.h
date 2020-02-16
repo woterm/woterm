@@ -8,6 +8,8 @@ namespace Ui {
 class QWoAboutDialog;
 }
 
+class QHttpClient;
+
 class QWoAboutDialog : public QDialog
 {
     Q_OBJECT
@@ -21,6 +23,8 @@ private slots:
     void onResult(int code, const QByteArray& body);
 private:
     Ui::QWoAboutDialog *ui;
+
+    QPointer<QHttpClient> m_httpClient;
 };
 
 #endif // QWOABOUTDIALOG_H

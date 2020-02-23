@@ -27,6 +27,9 @@
 bool lessThan(const HostInfo& a, const HostInfo& b) {
     return a.name < b.name;
 }
+bool moreThan(const HostInfo& a, const HostInfo& b) {
+    return a.name > b.name;
+}
 
 void copyHostInfo(HostInfo &dst, const HostInfo &src)
 {

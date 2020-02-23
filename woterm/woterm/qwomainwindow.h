@@ -60,6 +60,7 @@ private slots:
     void onActionSettingTriggered();
     void onActionFindTriggered();
     void onActionAboutTriggered();
+    void onActionHelpTriggered();
     void onActionScriptRunTriggered();
     void onActionSshKeyManageTriggered();
 

@@ -5,7 +5,7 @@
 #include <QVariantMap>
 
 
-typedef struct{
+struct HostInfo{
     QString name;
     QString host;
     int port;
@@ -15,8 +15,8 @@ typedef struct{
     QString proxyJump;
     QString memo;
     QString property;
-    QString group;
-}HostInfo;
+    QString group;    
+};
 
 struct HistoryCommand {
     QString cmd;
@@ -26,6 +26,14 @@ struct HistoryCommand {
         return other.cmd == cmd;
     }
 };
+
+typedef struct{
+    QString path;
+    QString name;
+    QString fingureprint;
+    QString key;
+    QString type;
+} IdentifyInfo;
 
 Q_DECLARE_METATYPE(HostInfo)
 Q_DECLARE_METATYPE(HistoryCommand)

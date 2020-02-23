@@ -58,7 +58,8 @@ SOURCES += main.cpp \
     qhttpclient.cpp \
     qwosettingdialog.cpp \
     qwocommandhistorymodel.cpp \
-    qwocommandhistoryform.cpp
+    qwocommandhistoryform.cpp \
+    qwoidentifyinfomation.cpp
 
 HEADERS += \
     vte.h \
@@ -110,7 +111,8 @@ HEADERS += \
     qhttpclient.h \
     qwosettingdialog.h \
     qwocommandhistorymodel.h \
-    qwocommandhistoryform.h
+    qwocommandhistoryform.h \
+    qwoidentifyinfomation.h
 
 
 FORMS += \

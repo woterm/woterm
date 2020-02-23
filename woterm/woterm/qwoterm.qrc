@@ -43,5 +43,7 @@
         <file>resource/skin/history.png</file>
         <file>resource/skin/keys.png</file>
         <file>resource/skin/keyset.png</file>
+        <file>resource/skin/help.png</file>
+        <file>resource/skin/help2.png</file>
     </qresource>
 </RCC>

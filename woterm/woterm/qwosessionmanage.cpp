@@ -8,6 +8,7 @@
 #include "qwosshconf.h"
 #include "qwosessionproperty.h"
 #include "qwotreeview.h"
+#include "qwoidentifyinfomation.h"
 
 #include <QFileDialog>
 #include <QMenu>
@@ -140,12 +141,58 @@ void QWoSessionManage::onImportReady()
     QWoSshConf conf(fileName, this);
     conf.refresh();
     QList<HostInfo> hosts = conf.hostList();
-    //qDebug() << his;
-    QWoSshConf *gconf = QWoSshConf::instance();
+    if(hosts.isEmpty()) {
+        QMessageBox::warning(this, tr("warning"), tr("it's not a ssh config format: %1").arg(fileName));
+        return;
+    }
+    QMap<QString, IdentifyInfo> all = QWoIdentifyInfomation::listAll();
+    QMap<QString, QString> needsImport;
+    QWoIdentifyInfomation identify;
+    QMap<QString, QString> path2figure;
     for(int i = 0; i < hosts.length(); i++) {
         HostInfo hi = hosts.at(i);
+        if(!hi.identityFile.isEmpty()) {
+            QDir dir;
+            QString path = hi.identityFile;
+            if(path.startsWith('~')) {
+                path=QDir::homePath() + "/" + path.remove(0, 1);
+            }
+            path = QDir::cleanPath(path);
+            if(!QFile::exists(path)) {
+                QMessageBox::warning(this, tr("warning"), tr("failed to find the identify file list in config file for bad path: %1").arg(path));
+                return;
+            }
+            IdentifyInfo info;
+            if(!identify.identifyInfomation(path, &info)) {
+                QMessageBox::warning(this, tr("warning"), tr("bad identify file: %1").arg(path));
+                return;
+            }
+            if(!all.contains(info.fingureprint)){
+                needsImport.insert(info.path, info.path);
+            }
+            path2figure.insert(info.path, info.fingureprint);
+        }
+    }
+    if(!needsImport.isEmpty()) {
+        QString items = needsImport.keys().join("\r\n");
+        QMessageBox::warning(this, tr("warning"), tr("The config file contain the follow identify's files, Please import them before do this action. \r\n\r\n%1").arg(items));
+        return;
+    }
+    //qDebug() << his;    
+    QWoSshConf *gconf = QWoSshConf::instance();    
+    for(int i = 0; i < hosts.length(); i++) {
+        HostInfo hi = hosts.at(i);
+        if(!hi.identityFile.isEmpty()) {
+            QString path = hi.identityFile;
+            if(path.startsWith('~')) {
+                path=QDir::homePath() + "/" + path.remove(0, 1);
+            }
+            path = QDir::cleanPath(path);
+            IdentifyInfo info = all.value(path2figure.value(path));
+            hi.identityFile = "woterm:" + QWoUtils::nameToPath(info.name);
+        }
         if(!gconf->append(hi)) {
-            QString name = hi.name;
+            QString name = hi.name;            
             for(int j = 1; j < 100; j++){
                 hi.name = QString("%1-%2").arg(name).arg(j);
                 if(gconf->append(hi)) {

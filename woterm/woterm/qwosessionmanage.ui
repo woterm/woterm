@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="qwoterm.qrc">
-    <normaloff>:/qwoterm/resource/skin/manage.png</normaloff>:/qwoterm/resource/skin/manage.png</iconset>
+    <normaloff>:/qwoterm/resource/skin/nodes.png</normaloff>:/qwoterm/resource/skin/nodes.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>

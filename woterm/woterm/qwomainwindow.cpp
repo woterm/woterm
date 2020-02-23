@@ -41,7 +41,7 @@ QWoMainWindow::QWoMainWindow(QWidget *parent)
     setMinimumSize(QSize(1024, 700));
 
     setContentsMargins(3,3,3,3);
-    setWindowTitle(QString("WoTerm %1").arg(WOTERM_VERSION));
+    setWindowTitle("WoTerm");
 
     initMenuBar();
     initToolBar();
@@ -308,6 +308,11 @@ void QWoMainWindow::onActionAboutTriggered()
     dlg.exec();
 }
 
+void QWoMainWindow::onActionHelpTriggered()
+{
+    QDesktopServices::openUrl(QUrl("http://www.woterm.com/help"));
+}
+
 void QWoMainWindow::onActionScriptRunTriggered()
 {
     m_shower->openScriptRuner("script");
@@ -352,7 +357,7 @@ void QWoMainWindow::initToolBar()
     tool->addAction(QIcon(":/qwoterm/resource/skin/js.png"), tr("Script"), this, SLOT(onActionScriptRunTriggered()));
     tool->addAction(QIcon(":/qwoterm/resource/skin/keyset.png"), tr("Keys"), this, SLOT(onActionSshKeyManageTriggered()));
     //tool->addAction(QIcon(":/qwoterm/resource/skin/setting.png"), tr("Setting"), this, SLOT(onActionSettingTriggered()));
-    tool->addAction(QIcon(":/qwoterm/resource/skin/help.png"), tr("Help"), this, SLOT(onActionAboutTriggered()));
+    tool->addAction(QIcon(":/qwoterm/resource/skin/help.png"), tr("Help"), this, SLOT(onActionHelpTriggered()));
     tool->addAction(QIcon(":/qwoterm/resource/skin/about.png"), tr("About"), this, SLOT(onActionAboutTriggered()));
 }
 

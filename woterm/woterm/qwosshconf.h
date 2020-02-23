@@ -17,7 +17,6 @@ public:
     bool save();
     bool refresh();
     bool exportToFile(const QString& path);
-
     void remove(const QString& name);
     bool modify(const HostInfo& hi);
     bool append(const HostInfo& hi);

@@ -254,7 +254,9 @@ bool QWoSshConf::exportToFile(const QString &path)
 {
     QByteArray buf = toStream();
     //qDebug() << buf;
+
     buf = QWoUtils::toWotermStream(buf);
+
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly)){
         return false;

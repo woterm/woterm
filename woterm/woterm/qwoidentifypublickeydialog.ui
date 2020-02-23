@@ -15,6 +15,13 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Copy the follow public key to remote server</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QTextEdit" name="key"/>
    </item>
    <item>

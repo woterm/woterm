@@ -54,6 +54,7 @@ QWoSessionManage::QWoSessionManage(QWidget *parent)
     QObject::connect(ui->btnDelete, SIGNAL(clicked()), this, SLOT(onDeleteReady()));
     QObject::connect(ui->btnModify, SIGNAL(clicked()), this, SLOT(onModifyReady()));
     QObject::connect(ui->btnNew, SIGNAL(clicked()), this, SLOT(onNewReady()));
+    QObject::connect(ui->btnImport, SIGNAL(clicked()), this, SLOT(onImportReady()));
     QObject::connect(m_tree, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(onTreeItemDoubleClicked(const QModelIndex&)));
 }
 
@@ -127,6 +128,32 @@ void QWoSessionManage::onNewReady()
     QWoSessionProperty dlg("", this);
     dlg.setButtonFlags(QWoSessionProperty::ButtonSave);
     dlg.exec();
+    refreshList();
+}
+
+void QWoSessionManage::onImportReady()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Import File"));
+    if(fileName.isEmpty()) {
+        return;
+    }
+    QWoSshConf conf(fileName, this);
+    conf.refresh();
+    QList<HostInfo> hosts = conf.hostList();
+    //qDebug() << his;
+    QWoSshConf *gconf = QWoSshConf::instance();
+    for(int i = 0; i < hosts.length(); i++) {
+        HostInfo hi = hosts.at(i);
+        if(!gconf->append(hi)) {
+            QString name = hi.name;
+            for(int j = 1; j < 100; j++){
+                hi.name = QString("%1-%2").arg(name).arg(j);
+                if(gconf->append(hi)) {
+                    break;
+                }
+            }
+        }
+    }
     refreshList();
 }
 

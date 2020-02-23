@@ -36,6 +36,7 @@ private slots:
     void onDeleteReady();
     void onModifyReady();
     void onNewReady();
+    void onImportReady();
     void onTreeViewOpenInSamePage();
     void onTreeViewOpenInDifferentPage();
     void onTreeItemDoubleClicked(const QModelIndex& idx);

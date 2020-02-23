@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="qwoterm.qrc">
+    <normaloff>:/qwoterm/resource/skin/keyset.png</normaloff>:/qwoterm/resource/skin/keyset.png</iconset>
+  </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
     <widget class="QTreeWidget" name="identify">
@@ -49,7 +53,7 @@
      <item>
       <widget class="QPushButton" name="btnView">
        <property name="text">
-        <string>View</string>
+        <string>PublicKey</string>
        </property>
       </widget>
      </item>
@@ -91,6 +95,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="qwoterm.qrc"/>
+ </resources>
  <connections/>
 </ui>

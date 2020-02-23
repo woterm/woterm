@@ -350,8 +350,9 @@ void QWoMainWindow::initToolBar()
 //    QObject::connect(myexport, SIGNAL(triggered()), this, SLOT(onActionExportTriggered()));
     tool->addAction(QIcon(":/qwoterm/resource/skin/palette.png"), tr("Style"), this, SLOT(onActionConfigDefaultTriggered()));
     tool->addAction(QIcon(":/qwoterm/resource/skin/js.png"), tr("Script"), this, SLOT(onActionScriptRunTriggered()));
-    //tool->addAction(QIcon(":/qwoterm/resource/skin/js.png"), tr("Keys"), this, SLOT(onActionSshKeyManageTriggered()));
+    tool->addAction(QIcon(":/qwoterm/resource/skin/keyset.png"), tr("Keys"), this, SLOT(onActionSshKeyManageTriggered()));
     //tool->addAction(QIcon(":/qwoterm/resource/skin/setting.png"), tr("Setting"), this, SLOT(onActionSettingTriggered()));
+    tool->addAction(QIcon(":/qwoterm/resource/skin/help.png"), tr("Help"), this, SLOT(onActionAboutTriggered()));
     tool->addAction(QIcon(":/qwoterm/resource/skin/about.png"), tr("About"), this, SLOT(onActionAboutTriggered()));
 }
 

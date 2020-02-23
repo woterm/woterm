@@ -41,5 +41,7 @@
         <file>resource/skin/setting3.png</file>
         <file>resource/skin/setting.png</file>
         <file>resource/skin/history.png</file>
+        <file>resource/skin/keys.png</file>
+        <file>resource/skin/keyset.png</file>
     </qresource>
 </RCC>

@@ -1,1 +1,0 @@
-ÑÕÉ«Ö÷Ìâ£ºhttps://github.com/mbadolato/iTerm2-Color-Schemes
